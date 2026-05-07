@@ -14,6 +14,12 @@
 		SERVICE_WORKER_LOAD_FAILED: ["无法启用即时编译功能", "serviceWorker加载失败"].join("\n"),
 	};
 
+	// 非安全上下文（公网 HTTP、内网 IP 的 HTTP 等）无法注册 Service Worker，register 会失败。
+	// 原逻辑在 catch 里会 reload，容易造成反复刷新、白屏。已构建的 JS 不依赖 SW 仍可正常游戏，仅失去 JIT/TS 即时编译。
+	if (typeof window !== "undefined" && window.isSecureContext === false) {
+		return;
+	}
+
 	if (!("serviceWorker" in navigator)) {
 		alert(globalText.SERVICE_WORKER_NOT_SUPPORT);
 		return;
@@ -49,12 +55,8 @@
 			sessionStorage.setItem("canUseTs", "true");
 		}
 	} catch (e) {
-		if (sessionStorage.getItem("canUseTs") === "false") {
-			console.log("serviceWorker加载失败: ", e);
-			// alert(globalText.SERVICE_WORKER_LOAD_FAILED);
-		} else {
-			sessionStorage.setItem("canUseTs", "false");
-			window.location.reload();
-		}
+		// 不再因注册失败而整页重载，避免在 SW 不可用的环境（配置错误、HTTPS 混用等）死循环白屏
+		console.warn("serviceWorker 注册失败，JIT 不可用，将使用已构建资源:", e);
+		sessionStorage.setItem("canUseTs", "false");
 	}
 })();

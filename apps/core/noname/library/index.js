@@ -32,7 +32,14 @@ export class Library {
 	updateURLS = updateURLs;
 	updateURL = updateURLs.github;
 	mirrorURL = updateURLs.coding;
-	hallURL = "";
+	hallURL = (() => {
+		// 自动检测当前域名生成 WebSocket 联机服务器地址
+		if (typeof location === "undefined") return "";
+		const protocol = location.protocol === "https:" ? "wss:" : "ws:";
+		// 如果 Nginx 配置了 /ws 路径代理，使用 /ws 路径
+		// 否则直接连接 8082 端口
+		return `${protocol}//${location.host}/ws`;
+	})();
 	assetURL = assetURL;
 	userAgent = userAgentLowerCase;
 	characterDefaultPicturePath = characterDefaultPicturePath;

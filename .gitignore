@@ -2,6 +2,7 @@ dist
 output
 node_modules
 package-lock.json
+*.log
 
 # IDE
 .idea/
@@ -17,3 +18,7 @@ package-lock.json
 # Windows
 ehthumbs.db
 Thumbs.db
+
+# Nginx config
+noname.nginx.conf
+nginx-jump-server.example.conf
