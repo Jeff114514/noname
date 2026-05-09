@@ -22,3 +22,4 @@ Thumbs.db
 # Nginx config
 noname.nginx.conf
 nginx-jump-server.example.conf
+nginx-jump-server-baota.conf

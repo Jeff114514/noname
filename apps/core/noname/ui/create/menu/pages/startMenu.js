@@ -386,9 +386,17 @@ export const startMenu = function (connectMenu) {
 						morenodes._onclick.call(morenodes, "unexpand");
 					}
 				}
-			},
-			{ passive: true }
+		},
+		{ passive: true }
 		);
+	}
+
+	// 添加共享配置按钮（仅联机模式）
+	if (connectMenu) {
+		var roomConfigButton = ui.create.div(".lefttext", "共享配置", start.firstChild, function () {
+			game.roomConfig.showDialog();
+		});
+		roomConfigButton.style.marginTop = "7px";
 	}
 
 	return startButton;

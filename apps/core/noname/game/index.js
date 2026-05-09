@@ -16,6 +16,7 @@ import { isClass, userAgentLowerCase, GeneratorFunction, AsyncFunction, delay } 
 import { DynamicStyle } from "./dynamic-style/index.js";
 import { GamePromises } from "./promises.js";
 import { Check } from "./check.js";
+import { roomConfig } from "./roomConfig.js";
 
 import { security } from "@/util/sandbox.js";
 import { save } from "@/util/config.js";
@@ -10848,13 +10849,24 @@ ${e instanceof Error ? e.stack : String(e)}`);
 	}
 }
 
+function attachRoomConfigBridge() {
+	// noname.js 先加载本模块再加载 library，`lib` 在同步阶段可能尚未初始化；延后写入避免 TDZ
+	queueMicrotask(() => {
+		lib["roomConfigBridge"] = roomConfig;
+	});
+}
+
 export let game = new Game();
+game.roomConfig = roomConfig;
+attachRoomConfigBridge();
 
 /**
  * @param { InstanceType<typeof Game> } [instance]
  */
 export let setGame = instance => {
 	game = instance || new Game();
+	game.roomConfig = roomConfig;
+	attachRoomConfigBridge();
 	if (lib.config.dev) {
 		window.game = game;
 	}

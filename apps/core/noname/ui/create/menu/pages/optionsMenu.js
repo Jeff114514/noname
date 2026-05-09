@@ -1079,6 +1079,12 @@ export const optionsMenu = function (connectMenu) {
 	})();
 	createModeConfig("others", start.firstChild);
 
+	// 添加共享配置按钮（支持单机模式下管理云端配置）
+	var roomConfigButton = ui.create.div(".menubutton.large", "共享配置", start.firstChild, function () {
+		game.roomConfig.showDialog();
+	});
+	roomConfigButton.mode = "roomConfig";
+
 	var active = start.firstChild.querySelector(".active");
 	if (!active) {
 		active = start.firstChild.firstChild;

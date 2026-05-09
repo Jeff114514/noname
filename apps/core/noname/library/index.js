@@ -12495,6 +12495,7 @@ export class Library {
 				}
 				game.syncHandcard(player, cardid_list);
 			},
+
 		},
 		client: {
 			log: function (arr) {
@@ -12751,7 +12752,7 @@ export class Library {
 							try {
 								var roomId = text.split("\n")[1].match(/\d+/);
 								var caption = ui.rooms.find(caption => caption.key == roomId);
-								if (caption && (_status.read_clipboard_text || confirm(`是否通过复制的内容加入${roomId}房间？`))) {
+								if (caption) {
 									ui.click.connectroom.call(caption);
 									delete _status.read_clipboard_text;
 								}
@@ -12778,12 +12779,6 @@ export class Library {
 								ui.window.removeChild(input);
 								if (result || input.value.length > 0) {
 									read(input.value);
-								} else if (confirm("是否输入邀请链接以加入房间？")) {
-									game.prompt("请输入邀请链接", text => {
-										if (typeof text === "string" && text.length > 0) {
-											read(text);
-										}
-									});
 								}
 							}
 						}
@@ -12817,17 +12812,49 @@ export class Library {
 					}
 				}
 			},
-			eventsdenied: function (reason) {
-				var str = "创建约战失败";
-				if (reason == "total") {
-					str += "，约战总数不能超过20";
-				} else if (reason == "time") {
-					str += "，时间已过";
-				} else if (reason == "ban") {
-					str += "，请注意文明发言";
+			// room config shared message handler (set by game/index.js as lib["roomConfigBridge"])
+			roomConfigs: function (configs) {
+				var bridge = lib["roomConfigBridge"];
+				if (bridge && typeof bridge.handleServerMessage === "function") {
+					bridge.handleServerMessage("roomConfigs", configs);
 				}
-				alert(str);
 			},
+			roomConfigSaved: function (config) {
+				var bridge = lib["roomConfigBridge"];
+				if (bridge && typeof bridge.handleServerMessage === "function") {
+					bridge.handleServerMessage("roomConfigSaved", config);
+				}
+			},
+			roomConfigDeleted: function (id) {
+				var bridge = lib["roomConfigBridge"];
+				if (bridge && typeof bridge.handleServerMessage === "function") {
+					bridge.handleServerMessage("roomConfigDeleted", id);
+				}
+			},
+			roomConfigError: function (error) {
+				var bridge = lib["roomConfigBridge"];
+				if (bridge && typeof bridge.handleServerMessage === "function") {
+					bridge.handleServerMessage("roomConfigError", error);
+				}
+			},
+			roomConfigsUpdated: function () {
+				var bridge = lib["roomConfigBridge"];
+				if (bridge && typeof bridge.handleServerMessage === "function") {
+					bridge.handleServerMessage("roomConfigsUpdated");
+				}
+			},
+			eventsdenied: function (reason) {
+			var str = "创建约战失败";
+			if (reason == "total") {
+				str += "，约战总数不能超过20";
+			} else if (reason == "time") {
+				str += "，时间已过";
+			} else if (reason == "ban") {
+				str += "，请注意文明发言";
+			}
+			alert(str);
+		},
+
 			init: function (id, config, ip, servermode, roomId) {
 				game.online = true;
 				game.onlineID = id;

@@ -1,4 +1,6 @@
 import { WebSocket, WebSocketServer } from "ws";
+import fs from "fs";
+import path from "path";
 
 interface Client extends WebSocket {
 	wsid: string;
@@ -34,6 +36,26 @@ interface EventItem {
 	members: string[];
 }
 
+interface RoomConfig {
+	id: string;
+	name: string;
+	mode: string;
+	createdBy: string;
+	createdAt: number;
+	updatedAt: number;
+	config: {
+		characterPack: string[];
+		bannedCharacters: string[];
+		cardPack: string[];
+		bannedCards: string[];
+		chooseTimeout: number;
+		observe: boolean;
+		observeHandcard: boolean;
+		mountCombine: boolean;
+		modeSpecific: Record<string, any>;
+	};
+}
+
 //
 // ========= 全局状态 ==========
 //
@@ -45,6 +67,37 @@ const events: EventItem[] = [];
 const bannedKeys = new Set<string>();
 const bannedIps = new Set<string>();
 const bannedKeyWords: string[] = [];
+
+//
+// ========= 配置存储 ==========
+//
+
+const configDir = path.join(__dirname, "configs");
+const configPath = path.join(configDir, "shared.json");
+const MAX_CONFIGS = 50;
+
+// 确保配置目录存在
+if (!fs.existsSync(configDir)) {
+	fs.mkdirSync(configDir, { recursive: true });
+}
+
+// 加载配置
+function loadConfigs(): RoomConfig[] {
+	try {
+		if (fs.existsSync(configPath)) {
+			const data = fs.readFileSync(configPath, "utf-8");
+			return JSON.parse(data);
+		}
+	} catch (e) {
+		console.error("Load configs error:", e);
+	}
+	return [];
+}
+
+// 保存配置
+function saveConfigs(configs: RoomConfig[]) {
+	fs.writeFileSync(configPath, JSON.stringify(configs, null, 2));
+}
 
 const util = {
 	nickname(str: any): string {
@@ -141,6 +194,14 @@ const util = {
 		util.checkEvents();
 		clients.forEach(c => {
 			if (!c.room) util.sendl(c, "updateevents", events);
+		});
+	},
+
+	broadcastRoomConfigsUpdate(excludeClient?: Client) {
+		clients.forEach(c => {
+			if (c !== excludeClient) {
+				util.sendl(c, "roomConfigsUpdated");
+			}
 		});
 	},
 };
@@ -301,6 +362,85 @@ const handlers = {
 	close(client: Client, id: string) {
 		const target = clients.get(id);
 		if (target && target.owner === client) target.close();
+	},
+
+	// ========= 房间配置共享API =========
+
+	// 获取所有共享配置
+	getRoomConfigs(client: Client) {
+		const configs = loadConfigs();
+		util.sendl(client, "roomConfigs", configs);
+	},
+
+	// 保存配置（新建或更新）
+	saveRoomConfig(client: Client, config: RoomConfig, asNew: boolean = false) {
+		const configs = loadConfigs();
+
+		// 验证配置数据
+		if (!config || typeof config !== "object") {
+			return util.sendl(client, "roomConfigError", "无效的配置数据");
+		}
+		if (!config.name || typeof config.name !== "string") {
+			return util.sendl(client, "roomConfigError", "配置名称不能为空");
+		}
+		if (!config.mode || typeof config.mode !== "string") {
+			return util.sendl(client, "roomConfigError", "游戏模式不能为空");
+		}
+
+		// 限制名称长度
+		config.name = config.name.slice(0, 50);
+
+		if (asNew || !config.id) {
+			// 检查配置数量限制
+			if (configs.length >= MAX_CONFIGS) {
+				return util.sendl(client, "roomConfigError", `配置数量已达上限(${MAX_CONFIGS}个)`);
+			}
+
+			// 新建配置
+			config.id = util.newId();
+			config.createdAt = Date.now();
+			config.createdBy = client.nickname;
+			config.updatedAt = Date.now();
+			configs.push(config);
+		} else {
+			// 更新配置
+			const index = configs.findIndex(c => c.id === config.id);
+			if (index !== -1) {
+				// 保留创建信息
+				config.createdAt = configs[index].createdAt;
+				config.createdBy = configs[index].createdBy;
+				config.updatedAt = Date.now();
+				configs[index] = config;
+			} else {
+				return util.sendl(client, "roomConfigError", "配置不存在");
+			}
+		}
+
+		saveConfigs(configs);
+		util.sendl(client, "roomConfigSaved", config);
+
+		// 广播配置更新给所有在线用户
+		util.broadcastRoomConfigsUpdate(client);
+	},
+
+	// 删除配置
+	deleteRoomConfig(client: Client, id: string) {
+		if (!id || typeof id !== "string") {
+			return util.sendl(client, "roomConfigError", "无效的配置ID");
+		}
+
+		const configs = loadConfigs();
+		const index = configs.findIndex(c => c.id === id);
+		if (index !== -1) {
+			configs.splice(index, 1);
+			saveConfigs(configs);
+			util.sendl(client, "roomConfigDeleted", id);
+
+			// 广播配置删除
+			util.broadcastRoomConfigsUpdate(client);
+		} else {
+			util.sendl(client, "roomConfigError", "配置不存在");
+		}
 	},
 };
 
