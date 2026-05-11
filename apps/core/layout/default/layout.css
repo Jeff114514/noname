@@ -3489,6 +3489,9 @@ div.select-all:not(.card):not(.player) {
 .connectevents.left2 {
 	transform: translateX(-170px);
 }
+.connectevents.left3 {
+	transform: translateX(-340px);
+}
 .connectevents.icon {
 	width: 20px;
 	height: 20px;

@@ -12601,8 +12601,16 @@ export class Library {
 							ui.click.connectClients
 						);
 						ui.connectClientsCount = ui.create.div(".forceopaque.menubutton.icon.connectevents.highlight.left", "1", ui.window);
-						ui.createRoomButton = ui.create.div(
+						ui.roomConfigButton = ui.create.div(
 							".forceopaque.menubutton.large.connectevents.pointerdiv.left2",
+							"共享配置",
+							ui.window,
+							function () {
+								game.roomConfig.showDialog();
+							}
+						);
+						ui.createRoomButton = ui.create.div(
+							".forceopaque.menubutton.large.connectevents.pointerdiv.left3",
 							"创建房间",
 							ui.window,
 							function () {

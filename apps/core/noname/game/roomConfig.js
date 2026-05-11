@@ -263,6 +263,18 @@ export const roomConfig = {
 			}
 		}
 
+		// 应用单机武将包
+		if (cfg.localCharacters && Array.isArray(cfg.localCharacters)) {
+			lib.config.characters = cfg.localCharacters.slice(0);
+			game.saveConfig("characters", lib.config.characters);
+		}
+
+		// 应用单机卡牌包
+		if (cfg.localCards && Array.isArray(cfg.localCards)) {
+			lib.config.cards = cfg.localCards.slice(0);
+			game.saveConfig("cards", lib.config.cards);
+		}
+
 		roomConfig._emit("configApplied", config);
 	},
 
@@ -315,7 +327,9 @@ export const roomConfig = {
 			config: {
 				characterPack,
 				cardPack,
-				modeConfigs
+				modeConfigs,
+				localCharacters: lib.config.characters,
+				localCards: lib.config.cards
 			}
 		};
 	},
