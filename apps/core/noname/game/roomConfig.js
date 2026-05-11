@@ -64,7 +64,7 @@ export const roomConfig = {
 	 */
 	async getCloudConfigs() {
 		return new Promise((resolve, reject) => {
-			if (!game.online) {
+			if (!game.online && !game.onlineroom) {
 				reject(new Error("未连接到服务器"));
 				return;
 			}
@@ -98,7 +98,7 @@ export const roomConfig = {
 	 */
 	async saveToCloud(config, asNew = false) {
 		return new Promise((resolve, reject) => {
-			if (!game.online) {
+			if (!game.online && !game.onlineroom) {
 				reject(new Error("未连接到服务器"));
 				return;
 			}
@@ -145,7 +145,7 @@ export const roomConfig = {
 	 */
 	async deleteFromCloud(id) {
 		return new Promise((resolve, reject) => {
-			if (!game.online) {
+			if (!game.online && !game.onlineroom) {
 				reject(new Error("未连接到服务器"));
 				return;
 			}
@@ -184,7 +184,7 @@ export const roomConfig = {
 	 * 应用配置到当前房间设置
 	 * @param {Object} config 配置对象
 	 */
-	applyConfig(config) {
+	applyConfig(config, coverLocal = true) {
 		const { mode: configMode, config: cfg } = config;
 
 		// 应用全局武将池
@@ -264,13 +264,13 @@ export const roomConfig = {
 		}
 
 		// 应用单机武将包
-		if (cfg.localCharacters && Array.isArray(cfg.localCharacters)) {
+		if (coverLocal && cfg.localCharacters && Array.isArray(cfg.localCharacters)) {
 			lib.config.characters = cfg.localCharacters.slice(0);
 			game.saveConfig("characters", lib.config.characters);
 		}
 
 		// 应用单机卡牌包
-		if (cfg.localCards && Array.isArray(cfg.localCards)) {
+		if (coverLocal && cfg.localCards && Array.isArray(cfg.localCards)) {
 			lib.config.cards = cfg.localCards.slice(0);
 			game.saveConfig("cards", lib.config.cards);
 		}
@@ -633,8 +633,9 @@ window.parent.postMessage({type:'loadRoomConfigs'}, '*');
 			var config = configCache ? configCache.find(c => c.id == id) : null;
 			if(!config) { alert("配置未找到"); return; }
 			
+			var coverLocal = confirm("是否同时覆盖单机配置？");
 			try {
-				roomConfig.applyConfig(config);
+				roomConfig.applyConfig(config, coverLocal);
 				alert("配置已应用");
 				cleanup();
 			} catch (err) {

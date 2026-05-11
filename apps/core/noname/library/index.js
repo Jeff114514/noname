@@ -13510,6 +13510,10 @@ export class Library {
 					ui.connectShareButton.delete();
 					delete ui.connectShareButton;
 				}
+				if (ui.roomConfigButton) {
+					ui.roomConfigButton.delete();
+					delete ui.roomConfigButton;
+				}
 				if (ui.roomInfo) {
 					ui.roomInfo.remove();
 					delete ui.roomInfo;
