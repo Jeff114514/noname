@@ -4605,12 +4605,21 @@ export const Content = {
 		};
 
 		let withol = false;
+		let localPlayerHandled = false;
+		
+		// 第一阶段：先向所有在线玩家发送请求并注册等待
 		for (const current of event.players) {
 			if (current.isOnline()) {
 				withol = true;
 				current.send(send);
 				current.wait(sendback);
-			} else if (current == game.me) {
+			}
+		}
+		
+		// 第二阶段：处理本地玩家
+		for (const current of event.players) {
+			if (current == game.me) {
+				localPlayerHandled = true;
 				const next = game.me.chooseBool("是否置换手牌？");
 				game.me.wait(sendback);
 				const result = await next.forResult();
