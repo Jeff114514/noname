@@ -4819,7 +4819,7 @@ export default () => {
 				subSkill: {
 					off: {
 						trigger: { global: "gameStart" },
-						content() {
+						async content(event, trigger, player) {
 							player.disableSkill("boss_echou_awake", "boss_echou");
 						},
 						silent: true,
@@ -4827,12 +4827,12 @@ export default () => {
 					on: {
 						trigger: { player: "changeHp" },
 						filter(event, player) {
-							return player.hp <= player.maxHp / 2;
+							return player.hp <= player.maxHp / 2 && event.changedHp != 0;
 						},
 						forced: true,
 						skillAnimation: true,
 						animationColor: "thunder",
-						content() {
+						async content(event, trigger, player) {
 							player.enableSkill("boss_echou_awake");
 							player.removeSkill("boss_echou_switch");
 						},
@@ -4898,7 +4898,7 @@ export default () => {
 				subSkill: {
 					off: {
 						trigger: { global: "gameStart" },
-						content() {
+						async content(event, trigger, player) {
 							player.disableSkill("boss_xushi_awake", "boss_xushi");
 						},
 						silent: true,
@@ -4906,12 +4906,12 @@ export default () => {
 					on: {
 						trigger: { player: "changeHp" },
 						filter(event, player) {
-							return player.hp <= player.maxHp / 2;
+							return player.hp <= player.maxHp / 2 && event.changedHp != 0;
 						},
 						forced: true,
 						skillAnimation: true,
 						animationColor: "thunder",
-						content() {
+						async content(event, trigger, player) {
 							player.enableSkill("boss_xushi_awake");
 							player.removeSkill("boss_xushi_switch");
 						},
@@ -5033,7 +5033,7 @@ export default () => {
 				subSkill: {
 					off: {
 						trigger: { global: "gameStart" },
-						content() {
+						async content(event, trigger, player) {
 							player.disableSkill("boss_yanyu_awake", "boss_yanyu");
 						},
 						silent: true,
@@ -5041,12 +5041,12 @@ export default () => {
 					on: {
 						trigger: { player: "changeHp" },
 						filter(event, player) {
-							return player.hp <= player.maxHp / 2;
+							return player.hp <= player.maxHp / 2 && event.changedHp != 0;
 						},
 						forced: true,
 						skillAnimation: true,
 						animationColor: "thunder",
-						content() {
+						async content(event, trigger, player) {
 							player.enableSkill("boss_yanyu_awake");
 							player.removeSkill("boss_yanyu_switch");
 						},
@@ -5123,7 +5123,7 @@ export default () => {
 				subSkill: {
 					off: {
 						trigger: { global: "gameStart" },
-						content() {
+						async content(event, trigger, player) {
 							player.disableSkill("boss_sipu_awake", "boss_sipu");
 						},
 						silent: true,
@@ -5131,12 +5131,12 @@ export default () => {
 					on: {
 						trigger: { player: "changeHp" },
 						filter(event, player) {
-							return player.hp <= player.maxHp / 2;
+							return player.hp <= player.maxHp / 2 && event.changedHp != 0;
 						},
 						forced: true,
 						skillAnimation: true,
 						animationColor: "thunder",
-						content() {
+						async content(event, trigger, player) {
 							player.enableSkill("boss_sipu_awake");
 							player.removeSkill("boss_sipu_switch");
 						},
@@ -5544,7 +5544,7 @@ export default () => {
 				subSkill: {
 					off: {
 						trigger: { global: "gameStart" },
-						content() {
+						async content(event, trigger, player) {
 							player.disableSkill("boss_yinzei_awake", "boss_yinzei");
 						},
 						silent: true,
@@ -5552,12 +5552,12 @@ export default () => {
 					on: {
 						trigger: { player: "changeHp" },
 						filter(event, player) {
-							return player.hp <= player.maxHp / 2;
+							return player.hp <= player.maxHp / 2 && event.changedHp != 0;
 						},
 						forced: true,
 						skillAnimation: true,
 						animationColor: "thunder",
-						content() {
+						async content(event, trigger, player) {
 							player.enableSkill("boss_yinzei_awake");
 							player.removeSkill("boss_yinzei_switch");
 						},
@@ -5572,7 +5572,7 @@ export default () => {
 				subSkill: {
 					off: {
 						trigger: { global: "gameStart" },
-						content() {
+						async content(event, trigger, player) {
 							player.disableSkill("boss_jicai_awake", "boss_jicai");
 						},
 						silent: true,
@@ -5580,12 +5580,12 @@ export default () => {
 					on: {
 						trigger: { player: "changeHp" },
 						filter(event, player) {
-							return player.hp <= player.maxHp / 2;
+							return player.hp <= player.maxHp / 2 && event.changedHp != 0;
 						},
 						forced: true,
 						skillAnimation: true,
 						animationColor: "thunder",
-						content() {
+						async content(event, trigger, player) {
 							player.enableSkill("boss_jicai_awake");
 							player.removeSkill("boss_jicai_switch");
 						},
@@ -5600,7 +5600,7 @@ export default () => {
 				subSkill: {
 					off: {
 						trigger: { global: "gameStart" },
-						content() {
+						async content(event, trigger, player) {
 							player.disableSkill("boss_luanchang_awake", "boss_luanchang");
 						},
 						silent: true,
@@ -5608,12 +5608,12 @@ export default () => {
 					on: {
 						trigger: { player: "changeHp" },
 						filter(event, player) {
-							return player.hp <= player.maxHp / 2;
+							return player.hp <= player.maxHp / 2 && event.changedHp != 0;
 						},
 						forced: true,
 						skillAnimation: true,
 						animationColor: "thunder",
-						content() {
+						async content(event, trigger, player) {
 							player.enableSkill("boss_luanchang_awake");
 							player.removeSkill("boss_luanchang_switch");
 						},
@@ -5628,7 +5628,7 @@ export default () => {
 				subSkill: {
 					off: {
 						trigger: { global: "gameStart" },
-						content() {
+						async content(event, trigger, player) {
 							player.disableSkill("boss_yandu_awake", "boss_yandu");
 						},
 						silent: true,
@@ -5636,12 +5636,12 @@ export default () => {
 					on: {
 						trigger: { player: "changeHp" },
 						filter(event, player) {
-							return player.hp <= player.maxHp / 2;
+							return player.hp <= player.maxHp / 2 && event.changedHp != 0;
 						},
 						forced: true,
 						skillAnimation: true,
 						animationColor: "thunder",
-						content() {
+						async content(event, trigger, player) {
 							player.enableSkill("boss_yandu_awake");
 							player.removeSkill("boss_yandu_switch");
 						},
@@ -10226,7 +10226,10 @@ export default () => {
 					}
 				},
 				filter(event, player) {
-					return player.hp <= 4 || _status.boss_baonuwash;
+					if (event.name == "changeHp") {
+						return player.hp <= 4 && event.changedHp != 0;
+					}
+					return _status.boss_baonuwash;
 				},
 				content() {
 					"step 0";

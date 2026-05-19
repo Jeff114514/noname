@@ -1444,14 +1444,12 @@ const skills = {
 	},
 	olwenyi: {
 		audio: 2,
-		trigger: {
-			global: ["changeHpAfter"],
-		},
+		trigger: { global: ["changeHpAfter"] },
 		filter(event, player) {
 			if (player.countMark("olwenyi_used") > player.countMark("olwenyi_limit")) {
 				return false;
 			}
-			if (event.player.hp != 1 || event.num == 0) {
+			if (event.player.hp != 1 || event.changedHp == 0) {
 				return false;
 			}
 			return player.hasUsableCard("tao", "use") || player.countCards("he", card => _status.connectMode || get.type(card) == "equip");
@@ -1900,19 +1898,7 @@ const skills = {
 				if (opinion == "red") {
 					const cards = result.red.flatMap(i => i[1]).filter(card => get.itemtype(card) == "card");
 					if (cards.length) {
-						await player
-							.gain(cards)
-							.set("animate", event => {
-								const player = event.player,
-									cards = event.cards;
-								event.targets.forEach((target, index) => {
-									target.$give(cards[index], player);
-								});
-							})
-							.set(
-								"targets",
-								result.red.map(i => i[0]).filter(target => target != player)
-							);
+						await player.gain(cards, "give");
 					}
 				} else if (opinion == "black") {
 					const drawer = result.red
@@ -5665,7 +5651,7 @@ const skills = {
 				effect: {
 					trigger: { player: "changeHpEnd" },
 					filter(event, player) {
-						return event.num !== 0;
+						return event.changedHp != 0;
 					},
 				},
 			},
@@ -32791,14 +32777,14 @@ const skills = {
 	yjixi: {
 		derivation: "rewangzun",
 		audio: "weidi",
-		trigger: { player: "phaseJieshuBegin" },
+		trigger: { player: "phaseAfter" },
 		forced: true,
 		filter(event, player) {
 			if (player.phaseNumber < 3) {
 				return false;
 			}
-			var num = 0;
-			for (var i = player.actionHistory.length - 1; i >= 0; i--) {
+			let num = 0;
+			for (let i = player.actionHistory.length - 1; i >= 0; i--) {
 				if (!player.actionHistory[i].isMe) {
 					continue;
 				}
@@ -32816,24 +32802,18 @@ const skills = {
 		skillAnimation: true,
 		animationColor: "gray",
 		juexingji: true,
-		content() {
-			"step 0";
+		async content(event, trigger, player) {
 			player.awakenSkill(event.name);
-			player.gainMaxHp();
-			player.recover();
-			"step 1";
-			var str = "摸两张牌";
-			var mode = get.mode();
-			var choice = "选项一";
+			await player.gainMaxHp();
+			await player.recover();
+			let str = "摸两张牌";
+			const mode = get.mode();
+			let choice = "选项一";
+				const list = [];
 			if (mode == "identity" || (mode == "versus" && _status.mode == "four")) {
-				var list = [];
-				var zhu = get.zhu(player);
+				const zhu = get.zhu(player);
 				if (zhu && zhu != player && zhu.skills) {
-					for (var i = 0; i < zhu.skills.length; i++) {
-						if (lib.skill[zhu.skills[i]] && lib.skill[zhu.skills[i]].zhuSkill) {
-							list.push(zhu.skills[i]);
-						}
-					}
+					list.addArray(zhu.skills.filter(skill => lib.skill[skill].zhuSkill));
 				}
 				if (list.length) {
 					str += "并获得技能" + get.translation(list);
@@ -32841,23 +32821,22 @@ const skills = {
 					choice = "选项二";
 				}
 			}
-			player
-				.chooseControl(function (event, player) {
-					return _status.event.choice;
-				})
+			const result = await player
+				.chooseControl()
 				.set("choiceList", ["获得技能〖妄尊〗", str])
-				.set("choice", choice);
-			"step 2";
-			if (result.control == "选项一") {
-				player.addSkills("rewangzun");
-			} else {
-				player.draw(2);
-				if (event.list) {
-					player.addSkills(event.list);
+				.set("choice", choice)
+				.set("ai", () => _status.event.choice)
+				.forResult();
+			if (result?.control == "选项一") {
+					player.addSkills("rewangzun");
+			} else if (result?.control == "选项二") {
+				await player.draw(2);
+				if (list.length) {
+					await player.addSkills(list);
 					game.broadcastAll(function (list) {
 						game.expandSkills(list);
-						for (var i of list) {
-							var info = lib.skill[i];
+						for (const skill of list) {
+							const info = lib.skill[skill];
 							if (!info) {
 								continue;
 							}
@@ -32866,7 +32845,7 @@ const skills = {
 							}
 							info.audioname2.old_yuanshu = "weidi";
 						}
-					}, event.list);
+					}, list);
 				}
 			}
 		},
@@ -33062,7 +33041,7 @@ const skills = {
 		charlotte: true,
 		sourceSkill: "xiahui",
 		filter(event) {
-			return event.num < 0;
+			return event.changedHp < 0;
 		},
 		content() {
 			player.removeSkill("xiahui2");
@@ -38523,29 +38502,34 @@ const skills = {
 			} else if (trigger.target.countCards("he")) {
 				await player.discardPlayerCard(trigger.target, "he", true);
 			}
-			player.markAuto("moukui2", trigger.target);
+			player.addTempSkill(event.name + "_conseq");
+			player.markAuto(event.name + "_conseq", [[trigger.card, trigger.target]]);
 		},
-		group: "moukui2",
-		ai: {
-			expose: 0.1,
-		},
-	},
-	moukui2: {
-		audio: false,
-		trigger: { player: "shaMiss" },
-		forced: true,
-		sourceSkill: "moukui",
-		onremove: true,
-		filter(event, player) {
-			if (!player.getStorage("moukui2").includes(event.target)) {
-				return false;
-			}
-			return player.countCards("he") > 0;
-		},
-		content() {
-			trigger.target.line(player, "green");
-			trigger.target.discardPlayerCard(player, true);
-			player.unmarkAuto("moukui2", [trigger.target]);
+		ai: { expose: 0.1 },
+		subSkill: {
+			conseq: {
+				charlotte: true,
+				onremove: true,
+				trigger: { player: "shaMiss" },
+				filter(event, player) {
+					if (!player.getStorage("moukui_conseq").some(([card, target]) => event.card == card && event.target == target)) {
+						return false;
+					}
+					return player.countCards("he") > 0;
+				},
+				forced: true,
+				popup: false,
+				async content(event, trigger, player) {
+					const list = player.getStorage(event.name).filter(([card, target]) => trigger.card == card && trigger.target == target);
+					player.unmarkAuto(event.name, list);
+					if (!player.getStorage(event.name).length) {
+						player.removeSkill(event.name);
+					}
+					const { target } = trigger;
+					target.line(player, "green");
+					await target.discardPlayerCard(player, true);
+				},
+			},
 		},
 	},
 	shenxian: {

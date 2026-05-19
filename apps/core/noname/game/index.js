@@ -167,9 +167,9 @@ export class Game {
 		}
 		if (filter !== false) {
 			if (list.length) {
-				game.countPlayer2(current => {
+				for (const current of game.filterPlayer2()) {
 					list.removeArray(get.nameList(current));
-				});
+				}
 			}
 			if (filter === undefined) {
 				_status.characterlist = list;
@@ -451,11 +451,12 @@ export class Game {
 			return Promise.resolve();
 		}
 
-		// @ts-expect-error childNodes是可迭代的
-		const elements = new Set(parentFrom.childNodes).union(parentTo.childNodes);
+		const elements = new Set(parentFrom.childNodes).union(new Set(parentTo.childNodes));
 
 		for (const element of elements) {
-			recordAsFirstPosition(element);
+			if (element instanceof HTMLElement) {
+				recordAsFirstPosition(element);
+			}
 		}
 
 		// 我们等待所有动画入队再更改节点结构喵
@@ -471,11 +472,12 @@ export class Game {
 		await new Promise(resolve => resolve(null));
 
 		// 然后是LAST喵，记录结束位置哦喵
-		// @ts-expect-error childNodes是可迭代的
-		const elements2 = new Set(parentFrom.childNodes).union(parentTo.childNodes);
+		const elements2 = new Set(parentFrom.childNodes).union(new Set(parentTo.childNodes));
 
 		for (const element of elements2) {
-			recordAsLastPosition(element);
+			if (element instanceof HTMLElement) {
+				recordAsLastPosition(element);
+			}
 		}
 
 		/**
@@ -6373,7 +6375,7 @@ ${e instanceof Error ? e.stack : String(e)}`);
 	}
 	/**
 	 * @param { string } skill
-	 * @param { Player } player
+	 * @param { Player } [player]
 	 */
 	removeGlobalSkill(skill, player) {
 		const players = lib.skill.globalmap[skill];

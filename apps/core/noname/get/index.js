@@ -868,8 +868,8 @@ export class Get {
 	/**
 	 * 用于获取武将的姓氏和名字
 	 * @param { string } str 武将ID
-	 * @param { string | undefined } defaultSurname 默认姓氏
-	 * @param { string | undefined } defaultName 默认名字，为空则设“某”
+	 * @param { string | undefined } [defaultSurname] 默认姓氏
+	 * @param { string | undefined } [defaultName] 默认名字，为空则设“某”
 	 * @returns { Array } 返回由[姓氏, 名字]组成的数组
 	 */
 	characterSurname(str, defaultSurname, defaultName) {
@@ -3469,6 +3469,23 @@ else if (entry[1] !== void 0) stringifying[key] = JSON.stringify(entry[1]);*/
 		return [];
 	}
 	/**
+	 * 获取一名角色的勾玉颜色（构思玩意）
+	 * @param {import("@/library/index.js").Player | { hp: number, maxHp: number}} player
+	 * @return {string}
+	 */
+	hpColor(player) {
+		let color;
+		const { hp, maxHp } = player;
+		if (hp > Math.round(maxHp / 2) || hp === maxHp) {
+			color = "green";
+		} else if (hp > Math.floor(maxHp / 3)) {
+			color = "yellow";
+		} else {
+			color = "red";
+		}
+		return color;
+	}
+	/**
 	 * 返回牌堆顶的牌
 	 * @param { number } [num = 1] 默认为1
 	 * @param { boolean } [putBack] 是否放回牌堆顶
@@ -5473,15 +5490,17 @@ else if (entry[1] !== void 0) stringifying[key] = JSON.stringify(entry[1]);*/
 				uiintro.add(addFavourite);
 			}
 			if (!simple || get.is.phoneLayout()) {
-				let viewInfo = ui.create.div(".text.center.pointerdiv");
-				viewInfo.link = node;
-				viewInfo.innerHTML = "查看资料";
-				viewInfo.listen(function () {
-					let player = this.link;
-					let audioName = player.skin.name || player.name1 || player.name;
-					ui.click.charactercard(player.name1 || player.name, null, null, true, player.node.avatar, audioName);
-				});
-				uiintro.add(viewInfo);
+				if (!node.name.startsWith("unknown")) {
+					let viewInfo = ui.create.div(".text.center.pointerdiv");
+					viewInfo.link = node;
+					viewInfo.innerHTML = "查看资料";
+					viewInfo.listen(function () {
+						let player = this.link;
+						let audioName = player.skin.name || player.name1 || player.name;
+						ui.click.charactercard(player.name1 || player.name, null, null, true, player.node.avatar, audioName);
+					});
+					uiintro.add(viewInfo);
+				}
 			}
 			if ((lib.config.change_skin || lib.skin) && (!simple || get.is.phoneLayout())) {
 				[node.name1, node.name2].forEach((nameskin, index) => {
