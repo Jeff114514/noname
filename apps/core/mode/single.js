@@ -745,8 +745,8 @@ export default () => {
 				}
 				return player.maxHp;
 			});
-			if (_status.connectMode && lib.configOL.change_card) {
-				game.replaceHandcards(game.players.slice(0));
+			if (_status.connectMode) {
+				game.replaceHandcardsAuto(game.players.slice(0));
 			}
 			"step 4";
 			game.phaseLoop(game.zhu);

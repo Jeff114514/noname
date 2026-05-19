@@ -407,110 +407,134 @@ export default () => {
 			} else {
 				info.push(lib.storage.single_control && game.players.length >= 4);
 			}
-			game.addVideo("init", null, info);
-			event.trigger("gameStart");
-			if (_status.connectMode) {
-				if (_status.mode == "1v1") {
-					_status.first_less = true;
-					game.gameDraw(_status.firstChoose.next);
-					game.phaseLoop(_status.firstChoose.next);
-				} else if (_status.mode == "2v2" || _status.mode == "3v3") {
-					_status.first_less = true;
-					var firstChoose = _status.firstAct || game.players.randomGet();
-					if (firstChoose.next.side == firstChoose.side) {
-						firstChoose = firstChoose.next;
-					}
-					game.gameDraw(firstChoose, function (player) {
-						if (lib.configOL.replace_handcard && player == firstChoose.previousSeat) {
-							return 5;
-						}
-						return 4;
-					});
-					game.phaseLoop(firstChoose);
-				} else if (_status.mode == "guandu") {
-					game.gameDraw(_status.firstAct);
-					game.phaseLoop(_status.firstAct);
-				} else if (_status.mode == "4v4") {
-					game.gameDraw(_status.firstAct, function (player) {
-						if (player == _status.firstAct.previousSeat) {
-							return 5;
-						}
-						return 4;
-					});
-					game.replaceHandcards(_status.firstAct.previous, _status.firstAct.previous.previous);
-					game.phaseLoop(_status.firstAct);
+		game.addVideo("init", null, info);
+		event.trigger("gameStart");
+		if (_status.connectMode) {
+			if (_status.mode == "1v1") {
+				_status.first_less = true;
+				game.gameDraw(_status.firstChoose.next);
+				game.replaceHandcardsAuto(game.players.slice(0));
+				game.phaseLoop(_status.firstChoose.next);
+			} else if (_status.mode == "2v2" || _status.mode == "3v3") {
+				_status.first_less = true;
+				var firstChoose = _status.firstAct || game.players.randomGet();
+				if (firstChoose.next.side == firstChoose.side) {
+					firstChoose = firstChoose.next;
 				}
-				event.finish();
-			} else {
-				if (_status.mode == "guandu") {
-					game.gameDraw(_status.firstAct, 4);
-					game.phaseLoop(_status.firstAct);
-				} else if (_status.mode == "two") {
-					_status.first_less = true;
-					_status.first_less_forced = true;
-					var firstChoose = _status.firstAct;
-					game.gameDraw(firstChoose, function (player) {
-						if (player == _status.firstAct.previousSeat && get.config("replace_handcard_two")) {
-							return 5;
-						}
-						return 4;
-					});
-					game.phaseLoop(firstChoose);
-				} else if (_status.mode == "endless") {
-					_status.first_less = true;
-					_status.first_less_forced = true;
-					var firstChoose = _status.firstAct;
-					game.gameDraw(firstChoose);
-					game.phaseLoop(firstChoose);
-				} else if (_status.mode == "four") {
-					game.gameDraw(_status.firstAct, function (player) {
-						if (player == _status.firstAct.previousSeat) {
-							return 5;
-						}
-						return 4;
-					});
-					if (game.me == _status.firstAct.previous || game.me == _status.firstAct.previous.previous) {
-						game.me.chooseBool("是否置换手牌？");
-						event.replaceCard = true;
+				game.gameDraw(firstChoose, function (player) {
+					if (lib.configOL.replace_handcard && player == firstChoose.previousSeat) {
+						return 5;
 					}
-				} else if (_status.mode == "siguo") {
-					_status.siguoai = [
-						[-7.5, -2, 0, -4.5, -6, -7.5],
-						[-7.5, -2, 0, -4.5, -6, -7.5],
-						[-6, -6, -1, -4.5, -6, -7.5],
-						[-6, -3, 0, -3, -3, -6],
-						[-6, -3, 0, -3, -3, -6],
-						[-6, -6, -6, -6, -6, -6],
-					].randomGet();
-					var firstChoose = _status.firstAct;
-					game.gameDraw(firstChoose);
-					game.phaseLoop(firstChoose);
-				} else if (_status.mode == "jiange") {
-					var firstAct;
-					for (var i = 0; i < game.players.length; i++) {
-						if (game.players[i].type == "mech" && game.players[i].group == "wei") {
-							firstAct = game.players[i];
-							break;
-						}
+					return 4;
+				});
+				game.replaceHandcardsAuto(game.players.slice(0));
+				game.phaseLoop(firstChoose);
+			} else if (_status.mode == "guandu") {
+				game.gameDraw(_status.firstAct);
+				game.replaceHandcardsAuto(game.players.slice(0));
+				game.phaseLoop(_status.firstAct);
+			} else if (_status.mode == "4v4") {
+				game.gameDraw(_status.firstAct, function (player) {
+					if (player == _status.firstAct.previousSeat) {
+						return 5;
 					}
-					_status.actlist = [firstAct, firstAct.next, firstAct.previous, firstAct.next.next, firstAct.previous.previous, firstAct.next.next.next, firstAct.previous.previous.previous, firstAct.next.next.next.next];
-					game.gameDraw(firstAct);
-					game.phaseLoopJiange();
-				} else if (_status.mode == "three") {
-					var firstAct;
-					if (_status.color) {
-						firstAct = game.enemyZhu;
-					} else {
-						firstAct = game.friendZhu;
+					return 4;
+				});
+				game.replaceHandcardsAuto(game.players.slice(0));
+				game.phaseLoop(_status.firstAct);
+			}
+			event.finish();
+		} else {
+			if (_status.mode == "guandu") {
+				game.gameDraw(_status.firstAct, 4);
+				if (get.config("change_card") != "disabled") {
+					game.replaceHandcards(game.players.slice(0));
+				}
+				game.phaseLoop(_status.firstAct);
+			} else if (_status.mode == "two") {
+				_status.first_less = true;
+				_status.first_less_forced = true;
+				var firstChoose = _status.firstAct;
+				game.gameDraw(firstChoose, function (player) {
+					if (player == _status.firstAct.previousSeat && get.config("replace_handcard_two")) {
+						return 5;
 					}
-					game.gameDraw(firstAct, 4);
-					game.addGlobalSkill("autoswap");
-					if (lib.config.show_handcardbutton) {
-						ui.versushs = ui.create.system("手牌", null, true);
-						lib.setPopped(ui.versushs, game.versusHoverHandcards, 220);
+					return 4;
+				});
+				if (get.config("change_card") != "disabled") {
+					game.replaceHandcards(game.players.slice(0));
+				}
+				game.phaseLoop(firstChoose);
+			} else if (_status.mode == "endless") {
+				_status.first_less = true;
+				_status.first_less_forced = true;
+				var firstChoose = _status.firstAct;
+				game.gameDraw(firstChoose);
+				if (get.config("change_card") != "disabled") {
+					game.replaceHandcards(game.players.slice(0));
+				}
+				game.phaseLoop(firstChoose);
+			} else if (_status.mode == "four") {
+				game.gameDraw(_status.firstAct, function (player) {
+					if (player == _status.firstAct.previousSeat) {
+						return 5;
 					}
-					game.phaseLoopThree(firstAct);
+					return 4;
+				});
+				if (get.config("change_card") != "disabled") {
+					game.replaceHandcards(game.players.slice(0));
+				}
+				if (game.me == _status.firstAct.previous || game.me == _status.firstAct.previous.previous) {
+					game.me.chooseBool("是否置换手牌？");
+					event.replaceCard = true;
+				}
+			} else if (_status.mode == "siguo") {
+				_status.siguoai = [
+					[-7.5, -2, 0, -4.5, -6, -7.5],
+					[-7.5, -2, 0, -4.5, -6, -7.5],
+					[-6, -6, -1, -4.5, -6, -7.5],
+					[-6, -3, 0, -3, -3, -6],
+					[-6, -3, 0, -3, -3, -6],
+					[-6, -6, -6, -6, -6, -6],
+				].randomGet();
+				var firstChoose = _status.firstAct;
+				game.gameDraw(firstChoose);
+				if (get.config("change_card") != "disabled") {
+					game.replaceHandcards(game.players.slice(0));
+				}
+				game.phaseLoop(firstChoose);
+			} else if (_status.mode == "jiange") {
+				var firstAct;
+				for (var i = 0; i < game.players.length; i++) {
+					if (game.players[i].type == "mech" && game.players[i].group == "wei") {
+						firstAct = game.players[i];
+						break;
+					}
+				}
+				_status.actlist = [firstAct, firstAct.next, firstAct.previous, firstAct.next.next, firstAct.previous.previous, firstAct.next.next.next, firstAct.previous.previous.previous, firstAct.next.next.next.next];
+				game.gameDraw(firstAct);
+				if (get.config("change_card") != "disabled") {
+					game.replaceHandcards(game.players.slice(0));
+				}
+				game.phaseLoopJiange();
+			} else if (_status.mode == "three") {
+				var firstAct;
+				if (_status.color) {
+					firstAct = game.enemyZhu;
 				} else {
+					firstAct = game.friendZhu;
+				}
+				game.gameDraw(firstAct, 4);
+				if (get.config("change_card") != "disabled") {
+					game.replaceHandcards(game.players.slice(0));
+				}
+				game.addGlobalSkill("autoswap");
+				if (lib.config.show_handcardbutton) {
+					ui.versushs = ui.create.system("手牌", null, true);
+					lib.setPopped(ui.versushs, game.versusHoverHandcards, 220);
+				}
+				game.phaseLoopThree(firstAct);
+			} else {
 					var firstAct;
 					if (lib.storage.zhu) {
 						_status.currentSide = true;
@@ -543,6 +567,9 @@ export default () => {
 						}
 					}
 					game.gameDraw(firstAct, 4);
+					if (get.config("change_card") != "disabled") {
+						game.replaceHandcards(game.players.slice(0));
+					}
 					_status.first_less = true;
 					_status.round = 0;
 					if (lib.storage.single_control) {

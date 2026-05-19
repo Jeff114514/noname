@@ -522,10 +522,12 @@ export default () => {
 			event.trigger("gameStart");
 			if (_status.mode == "deck") {
 				game.gameDraw(game.me, 3);
+				game.replaceHandcardsAuto(game.players.slice(0));
 				game.me.drawDeck(1, false);
 				game.me.next.drawDeck(1, false);
 			} else {
 				game.gameDraw(game.me);
+				game.replaceHandcardsAuto(game.players.slice(0));
 			}
 			"step 3";
 			game.me.chooseBool("是否置换手牌？");

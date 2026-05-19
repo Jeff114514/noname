@@ -110,6 +110,19 @@ packages:
 - `noname/library/element/content.js` —— 内置事件内容（phase、draw、damage 等）
 - `noname/library/element/GameEvent/compilers/` —— 内容编译器（Step / Async / Array）
 
+**GameEvent 核心机制：**
+
+- **`next` 队列**：`GameEvent` 的 `next` 字段是一个 **Proxy 数组**。向其中 push 子事件时，会自动设置 `childEvent.parent = 当前事件`。`loop()` 在每个生命周期节点前都会 `await this.waitNext()`，按 FIFO 顺序 drain `next` 队列中的子事件。
+- **`after` 队列**：`after` 是普通数组，用于存放"当前事件主体完成后再执行"的事件。在 `loop()` 中，只有当 `_triggered >= 3`（即 End/After 阶段）且 `after` 有内容时，才会将 `after` 中的事件迁移到 `next` 中执行。
+- **生命周期状态机**：`_triggered` 字段控制事件生命周期：
+  - `0` → 触发 `nameBefore`
+  - `1` → 触发 `nameBegin`
+  - `2` → 执行 `content`（编译后的异步函数）
+  - `3` → 触发 `nameEnd`
+  - `4` → 触发 `nameAfter`，然后 drain `after[]`
+- **`await` 语义**：`GameEvent` 实现了 `PromiseLike<void>`。`await player.draw(2)` 时，`player.draw()` 创建的 `draw` 事件会被 push 到当前事件的 `next` 队列，`await` 则等待父事件的 `waitNext()` drain 到它才继续。
+- **技能触发**：`event.trigger(name)` 查找 `lib.hookmap[name]`，按座次遍历玩家收集技能，创建 `arrangeTrigger` 事件，再逐个创建 `createTrigger` 事件执行技能 `cost` 和 `content`。
+
 #### 启动流程
 
 ```
@@ -124,6 +137,15 @@ index.html
   -> chooseCharacter -> gameStart -> gameDraw -> phaseLoop
 ```
 
+**启动阶段分工：**
+
+- `noname/init/import.ts` —— 负责动态 `import()` 加载模式/武将包/卡包/扩展，并调用 `game.import()` 将内容注册到 `lib.imported`。`game.import()` 会返回一个 Promise 并跟踪在 `_status.importing` 中，boot 会等待这些 Promise 完成。
+- `noname/init/loading.ts` —— 负责将 `lib.imported` 中的内容**混入全局运行时**：
+  - `loadMode()` 通过 `mixinLibrary()` 将模式的 `skill`/`translate`/`character` 等注入 `lib`，通过 `mixinGeneral()` 将 `mode.game`/`mode.ui`/`mode.get`/`mode.ai` 混入对应单例。
+  - `loadCharacter()` 将武将包数据写入 `lib.character` 和 `lib.skill`。
+  - `loadCard()` 将卡牌定义写入 `lib.card` 和 `lib.cardPack`。
+  - `loadExtension()` 执行扩展的 `content` 函数并注入其角色/卡牌/技能。
+
 #### 武将包与模式的现代化
 
 `game/config.json` 中的 `moderned_characters` 列表定义了已现代化的武将包：
@@ -132,9 +154,41 @@ index.html
 ["bingshi", "clan", "collab", "diy", "huicui", "jsrg", "key", "standard", "shenhua", "extra", "refresh", "old", "sixiang", "sxrm", "yijiang"]
 ```
 
-这些包采用目录结构（含 `index.ts`、`skill.js`、`translate.js` 等），构建时会被 Vite 打包为单文件；未现代化的包则作为原始文件直接复制到 `dist/`。
+这些包采用目录结构，构建时会被 Vite 打包为单文件；未现代化的包则作为原始文件直接复制到 `dist/`。
 
-`moderned_modes` 列表同理，目前仅 `guozhan` 模式已完成现代化，拥有独立的 `src/` 目录结构。
+**现代化武将包目录结构**（以 `character/standard/` 为例）：
+```
+character/standard/
+├── index.js          # 入口，导入各子模块，调用 game.import("character", ...)
+├── character.js      # 武将定义
+├── skill.js          # 技能定义（导出对象）
+├── translate.js      # 翻译
+├── card.js           # 卡牌（如有）
+├── intro.js          # 武将介绍
+├── characterTitle.js # 称号
+├── pinyin.js         # 拼音
+├── voices.js         # 语音台词
+└── sort.js           # 分包排序
+```
+
+**现代化模式目录结构**（以 `mode/guozhan/` 为例）：
+```
+mode/guozhan/
+├── index.js          # export default { name: "guozhan", start, ... }
+├── meta.js
+└── src/
+    ├── main.js       # start / startBefore / onreinit
+    ├── character/    # 武将数据（按类别拆分）
+    ├── skill/        # 技能定义
+    ├── card/         # 卡牌定义
+    ├── translate/    # 翻译
+    ├── voices/       # 语音
+    ├── info/         # 牌堆定义等
+    ├── patch/        # 模式对 game/get/content/player 的覆盖
+    └── help/         # 帮助文本 / Vue 组件
+```
+
+`moderned_modes` 列表同理，目前仅 `guozhan` 已完成现代化。
 
 ### `apps/electron` —— 桌面客户端
 
@@ -375,10 +429,13 @@ Vite 配置中定义了：
 
 ### 技能代码形式
 
-项目支持两种技能内容写法：
+项目支持三种技能内容写法，**最终都通过 `ArrayCompiler` 执行**：
 
-1. **旧式 Step Content**（逐步骤函数，带 `"step 0"` 标记）
-2. **新式 Async Content**（推荐，async 函数配合 await）
+| 写法 | 编译路径 | 说明 |
+|------|----------|------|
+| **Step Content** | `StepCompiler` 解析 `"step 0"` 拆成函数数组 → `ArrayCompiler` | 旧代码大量存在 |
+| **Async Content** | `AsyncCompiler` 包装为单元素数组 → `ArrayCompiler` | **推荐写法** |
+| **Array Content** | 直接进入 `ArrayCompiler` | v1.10.15 后作为统一底层 |
 
 示例：
 ```javascript
@@ -397,8 +454,83 @@ async content(event, trigger, player) {
 }
 ```
 
+**Step 转 Async 的核心规则：**
+- `event.finish()` → `return;`
+- `event.goto(n)` / `event.redo()` → `if/while/for/break/continue`
+- 跨 step 的 `result` → `const result = await xxx.forResult()`
+- 跨 step 的 `event.xxx` → 优先用局部变量
+
+**Step 转 Async 的陷阱（不应 `await` 的调度型调用）：**
+
+以下函数内部会创建事件，但会将其从当前 `next` 队列移除并挂到 `after` 或父级队列中，因此**只调用不等待**：
+
+```javascript
+// ❌ 错误：await player.showCharacter(0);
+player.showCharacter(0);            // 亮将事件被挂到 after
+
+// ❌ 错误：await player.insertPhase();
+player.insertPhase();               // 额外回合被插到 phaseLoop 队列
+
+// ❌ 错误：await event.insertAfter(content, { player });
+event.insertAfter(content, { player }); // 事件被挂到当前事件的 after
+
+// ❌ 错误：await player.changeZhuanhuanji("skillName");
+player.changeZhuanhuanji("skillName"); // 转换技变更事件被挂到 after
+
+// ❌ 错误：await player.logSkill("skillName", targets);
+player.logSkill("skillName", targets); // 日志事件被挂到 after
+```
+
+识别模式：如果代码中有 `event.next.remove(next)` 后将 `next` push 到 `trigger.after` / `evt.after` / 父事件 `next` 等，则该事件属于调度型，不应 `await`。
+
+**联机模式下的 for 循环陷阱：**
+
+在联机 OL 事件（如 `replaceHandcardsOL`）中，以下写法会导致排在 `game.me` 后面的在线玩家收不到 `send` 指令：
+
+```javascript
+// ❌ 错误：await 阻塞了后续玩家的 send
+for (const current of event.players) {
+    if (current.isOnline()) {
+        current.send(send);
+        current.wait(sendback);
+    } else if (current == game.me) {
+        const next = game.me.chooseBool("...");
+        const result = await next.forResult();  // ⚠️ 阻塞循环！
+        game.me.unwait(result);
+    }
+}
+```
+
+正确写法（参考 `chooseCardOL`、`replaceHandcardsOL`）：
+
+```javascript
+// ✅ 正确：先向远程玩家 send，再 await 本地 game.me（房主也在线时不可对 game.me 走 send）
+while (true) {
+    delete event.resultOL;
+    for (const current of event.activePlayers) {
+        if (current.isOnline() && current != game.me) {
+            current.send(send);
+            current.wait(sendback);
+        }
+    }
+    for (const current of event.activePlayers) {
+        if (current == game.me) {
+            const next = game.me.chooseBool("...");
+            game.me.wait(sendback);
+            const result = await next.forResult();
+            game.me.unwait(result);
+        }
+    }
+    if (withol && !event.resultOL) await game.pause();
+    // ...
+}
+```
+
+联机手气卡配置读取：房间配置写入 `lib.configOL` 时会去掉 `connect_` 前缀，应使用 `game.getOLChangeCard()`（即 `lib.configOL.change_card`，并兼容 `connect_change_card`）。各模式开局请调用 `game.replaceHandcardsAuto(players)`，不要重复判断配置。
+
 技能定义参考：`docs/lib-skill-format.md`
-异步写法参考：`docs/async-guide.md`、`docs/step-to-async-guide.md`
+异步写法参考：`docs/async-guide.md`
+Step 转 Async 完整指南：`docs/step-to-async-guide.md`
 启动与事件流程参考：`docs/game-startup-flow.md`、`docs/game-event-flow.md`
 
 ---

@@ -991,27 +991,28 @@ export default () => {
 									return -10;
 								},
 							},
-							eltc: {
-								gameDraw: function () {
-									var end = player;
-									var numx;
-									var num = function (player) {
-										return player._hSeat > 5 ? 5 : 4;
-									};
-									do {
-										if (typeof num == "function") {
-											numx = num(player);
-										}
-										if (player._hSeat > 6) {
-											player.changeLingli(1);
-										}
-										let cards = get.cards(numx);
-										player.directgain(cards);
-										player._start_cards = cards;
-										player = player.next;
-									} while (player != end);
-								},
+						eltc: {
+							gameDraw: function () {
+								var end = player;
+								var numx;
+								var num = function (player) {
+									return player._hSeat > 5 ? 5 : 4;
+								};
+								do {
+									if (typeof num == "function") {
+										numx = num(player);
+									}
+									if (player._hSeat > 6) {
+										player.changeLingli(1);
+									}
+									let cards = get.cards(numx);
+									player.directgain(cards);
+									player._start_cards = cards;
+									player = player.next;
+								} while (player != end);
+								game.replaceHandcardsAuto(game.players.slice(0));
 							},
+						},
 							eltp: {
 								addSkillH: function (skill) {
 									this.skillH.add(skill);

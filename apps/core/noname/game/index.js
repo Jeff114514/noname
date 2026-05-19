@@ -1764,6 +1764,16 @@ export class Game {
 	 * @overload
 	 * @param {Player[]} args
 	 */
+	getOLChangeCard() {
+		if (!_status.connectMode || !lib.configOL) {
+			return null;
+		}
+		const changeCard = lib.configOL.change_card || lib.configOL.connect_change_card;
+		if (!changeCard || changeCard === "disabled" || changeCard === false) {
+			return null;
+		}
+		return changeCard;
+	}
 	replaceHandcards(...args) {
 		var next = game.createEvent("replaceHandcards");
 		if (Array.isArray(args[0])) {
@@ -1778,9 +1788,23 @@ export class Game {
 			}
 		}
 		if (_status.connectMode) {
+			next.changeCard = game.getOLChangeCard();
 			next.setContent("replaceHandcardsOL");
 		} else {
 			next.setContent("replaceHandcards");
+		}
+	}
+	/**
+	 * @param {Player[]} players
+	 */
+	replaceHandcardsAuto(players) {
+		if (_status.connectMode) {
+			if (!game.getOLChangeCard()) {
+				return;
+			}
+			game.replaceHandcards(players);
+		} else if (get.config("change_card") != "disabled") {
+			game.replaceHandcards(players);
 		}
 	}
 	/**

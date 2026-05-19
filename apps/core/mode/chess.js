@@ -470,6 +470,7 @@ export default () => {
 
 			event.trigger("gameStart");
 			game.gameDraw(p);
+			game.replaceHandcardsAuto(game.players.slice(0));
 			game.me.classList.add("current_action");
 			if (_status.mode == "three") {
 				game.phaseLoopThree(_status.color ? game.enemyZhu : game.friendZhu);

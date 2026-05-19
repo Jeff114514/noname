@@ -297,7 +297,7 @@ export const roomConfig = {
 
 		// 收集所有模式的配置
 		const modeConfigs = {};
-		const knownKeys = ["connect_choose_timeout", "connect_observe", "connect_observe_handcard", "connect_mount_combine"];
+		const knownKeys = ["connect_choose_timeout", "connect_observe", "connect_observe_handcard", "connect_mount_combine", "connect_change_card"];
 		for (const mode in lib.config.mode_config) {
 			const modeConfig = lib.config.mode_config[mode] || {};
 			const modeSpecific = {};

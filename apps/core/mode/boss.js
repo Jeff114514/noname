@@ -449,6 +449,7 @@ export default () => {
 			}
 			event.trigger("gameStart");
 			game.gameDraw(game.boss, game.bossinfo.gameDraw || 4);
+			game.replaceHandcardsAuto(game.players.slice(0));
 			game.bossPhaseLoop();
 			setTimeout(function () {
 				ui.updatehl();

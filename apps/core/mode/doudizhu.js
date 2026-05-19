@@ -177,8 +177,8 @@ export default () => {
 					return player == game.zhu ? 5 : 4;
 				};
 			}
-			if (_status.mode != "online" && _status.connectMode && lib.configOL.change_card) {
-				game.replaceHandcards(game.players.slice(0));
+			if (_status.connectMode) {
+				game.replaceHandcardsAuto(game.players.slice(0));
 			}
 			game.phaseLoop(game.zhu || _status.firstAct || game.me);
 			game.zhu.showGiveup();

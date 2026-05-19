@@ -5954,8 +5954,14 @@ export class Library {
 					restart: true,
 				},
 				connect_change_card: {
-					name: "启用手气卡",
-					init: false,
+					name: "开启手气卡",
+					init: "disabled",
+					item: {
+						disabled: "禁用",
+						once: "一次",
+						twice: "两次",
+						unlimited: "无限",
+					},
 					frequent: true,
 					restart: true,
 				},
@@ -6682,8 +6688,14 @@ export class Library {
 					intro: "若开启此选项，晋势力武将将使用OL【文德武备】版本；否则使用线下【紫气东来】【受命于天】版本。",
 				},
 				connect_change_card: {
-					name: "启用手气卡",
-					init: false,
+					name: "开启手气卡",
+					init: "disabled",
+					item: {
+						disabled: "禁用",
+						once: "一次",
+						twice: "两次",
+						unlimited: "无限",
+					},
 					frequent: true,
 					restart: true,
 				},
@@ -7025,6 +7037,7 @@ export class Library {
 						map.connect_replace_handcard.hide();
 						map.connect_olfeiyang_four.hide();
 					}
+					map.connect_change_card.show();
 				},
 				connect_versus_mode: {
 					name: "游戏模式",
@@ -7075,6 +7088,12 @@ export class Library {
 						5: "5人",
 					},
 				},
+				connect_change_card: {
+					name: "开启手气卡",
+					init: false,
+					frequent: true,
+					restart: true,
+				},
 			},
 			config: {
 				update: function (config, map) {
@@ -7110,6 +7129,7 @@ export class Library {
 						map.edit_character_four.hide();
 						map.reset_character_four.hide();
 					}
+					map.change_card.show();
 					if (config.versus_mode == "three") {
 						map.edit_character_three.show();
 						map.reset_character_three.show();
@@ -7209,6 +7229,16 @@ export class Library {
 					init: false,
 					frequent: true,
 					restart: true,
+				},
+				change_card: {
+					name: "开启手气卡",
+					init: "disabled",
+					item: {
+						disabled: "禁用",
+						once: "一次",
+						twice: "两次",
+						unlimited: "无限",
+					},
 				},
 				enable_all_three: {
 					name: "启用全部武将",
@@ -7666,6 +7696,16 @@ export class Library {
 					intro: "只控制一名角色，其他角色由AI控制",
 				},
 			},
+			change_card: {
+				name: "开启手气卡",
+				init: "disabled",
+				item: {
+					disabled: "禁用",
+					once: "一次",
+					twice: "两次",
+					unlimited: "无限",
+				},
+			},
 		},
 		doudizhu: {
 			name: "斗地主",
@@ -7751,8 +7791,14 @@ export class Library {
 					},
 				},
 				connect_change_card: {
-					name: "启用手气卡",
-					init: false,
+					name: "开启手气卡",
+					init: "disabled",
+					item: {
+						disabled: "禁用",
+						once: "一次",
+						twice: "两次",
+						unlimited: "无限",
+					},
 					frequent: true,
 					restart: true,
 				},
@@ -8120,8 +8166,14 @@ export class Library {
 					frequent: true,
 				},
 				connect_change_card: {
-					name: "启用手气卡",
-					init: false,
+					name: "开启手气卡",
+					init: "disabled",
+					item: {
+						disabled: "禁用",
+						once: "一次",
+						twice: "两次",
+						unlimited: "无限",
+					},
 					frequent: true,
 				},
 				connect_double_character: {
@@ -8313,6 +8365,7 @@ export class Library {
 						map.free_choose.hide();
 						map.change_choice.hide();
 					}
+					map.change_card.show();
 				},
 				chess_leader_save: {
 					name: "选择历程",
@@ -8456,6 +8509,16 @@ export class Library {
 						30: "30格/秒",
 					},
 				},
+				change_card: {
+					name: "开启手气卡",
+					init: "disabled",
+					item: {
+						disabled: "禁用",
+						once: "一次",
+						twice: "两次",
+						unlimited: "无限",
+					},
+				},
 			},
 		},
 		tafang: {
@@ -8510,6 +8573,16 @@ export class Library {
 						20: "20格/秒",
 						30: "30格/秒",
 					},
+				},
+			},
+			change_card: {
+				name: "开启手气卡",
+				init: "disabled",
+				item: {
+					disabled: "禁用",
+					once: "一次",
+					twice: "两次",
+					unlimited: "无限",
 				},
 			},
 		},
@@ -8580,6 +8653,16 @@ export class Library {
 					name: "创建场景",
 					init: true,
 					frequent: true,
+				},
+				change_card: {
+					name: "开启手气卡",
+					init: "disabled",
+					item: {
+						disabled: "禁用",
+						once: "一次",
+						twice: "两次",
+						unlimited: "无限",
+					},
 				},
 			},
 		},
@@ -8727,6 +8810,16 @@ export class Library {
 							delete ui.cheat;
 						}
 					},
+				},
+			},
+			change_card: {
+				name: "开启手气卡",
+				init: "disabled",
+				item: {
+					disabled: "禁用",
+					once: "一次",
+					twice: "两次",
+					unlimited: "无限",
 				},
 			},
 		},

@@ -3708,13 +3708,24 @@ export const Content = {
 		} while (player != end);
 
 		event.changeCard = get.config("change_card");
-		if (_status.connectMode || (lib.config.mode == "single" && _status.mode != "wuxianhuoli") || (lib.config.mode == "doudizhu" && _status.mode == "online") || (lib.config.mode != "identity" && lib.config.mode != "guozhan" && lib.config.mode != "doudizhu" && lib.config.mode != "single")) {
+		if (_status.connectMode) {
+			// 联机模式使用联机配置（lib.configOL.change_card，见 game.getOLChangeCard）
+			event.changeCard = game.getOLChangeCard() || "disabled";
+		} else if (lib.config.mode == "doudizhu" && _status.mode == "online") {
+			// 斗地主在线模式禁用
+			event.changeCard = "disabled";
+		} else if (!get.config("change_card") || get.config("change_card") == "disabled") {
+			// 单机模式根据配置决定
 			event.changeCard = "disabled";
 		}
 
 		await Promise.all(waitings);
 
 		if (!targets.includes(game.me) || event.changeCard == "disabled" || _status.auto || !game.me.countCards("h")) {
+			return;
+		}
+		// 联机模式下手气卡由 replaceHandcardsOL 统一处理
+		if (_status.connectMode) {
 			return;
 		}
 
@@ -4486,6 +4497,10 @@ export const Content = {
 			ui.exitroom.remove();
 			delete ui.exitroom;
 		}
+		if (ui.roomConfigButton) {
+			ui.roomConfigButton.delete();
+			delete ui.roomConfigButton;
+		}
 		game.broadcast("gameStart");
 		game.delay(2);
 		ui.auto.show();
@@ -4604,31 +4619,63 @@ export const Content = {
 			player._start_cards = cards;
 		};
 
-		let withol = false;
-		let localPlayerHandled = false;
-		
-		// 第一阶段：先向所有在线玩家发送请求并注册等待
-		for (const current of event.players) {
-			if (current.isOnline()) {
-				withol = true;
-				current.send(send);
-				current.wait(sendback);
-			}
-		}
-		
-		// 第二阶段：处理本地玩家
-		for (const current of event.players) {
-			if (current == game.me) {
-				localPlayerHandled = true;
-				const next = game.me.chooseBool("是否置换手牌？");
-				game.me.wait(sendback);
-				const result = await next.forResult();
-				game.me.unwait(result);
-			}
-		}
+		event.activePlayers = event.players.slice();
 
-		if (withol && !event.resultOL) {
-			await game.pause();
+		while (true) {
+			delete event.resultOL;
+
+			if (!event.activePlayers.length) {
+				break;
+			}
+
+			// 先检查当前状态，如果已经是"disabled"则直接退出
+			if (event.changeCard == "disabled") {
+				break;
+			}
+
+			// 更新状态：once→disabled, twice→once, unlimited 保持不变
+			if (event.changeCard == "once") {
+				event.changeCard = "disabled";
+			} else if (event.changeCard == "twice") {
+				event.changeCard = "once";
+			} else if (event.changeCard == "unlimited") {
+				// 无限次使用，不改变状态
+			}
+
+			let withol = false;
+
+			// 第一阶段：向远程在线玩家发送请求（本地 game.me 在第二阶段处理，避免重复 chooseBool）
+			for (const current of event.activePlayers) {
+				if (current.isOnline() && current != game.me) {
+					withol = true;
+					current.send(send);
+					current.wait(sendback);
+				}
+			}
+
+			// 第二阶段：处理本地玩家
+			for (const current of event.activePlayers) {
+				if (current == game.me) {
+					const next = game.me.chooseBool("是否置换手牌？");
+					game.me.wait(sendback);
+					const result = await next.forResult();
+					game.me.unwait(result);
+				}
+			}
+
+			if (withol && !event.resultOL) {
+				await game.pause();
+			}
+
+			// 根据本轮结果更新活跃玩家列表，选择"否"的玩家退出
+			if (event.resultOL) {
+				event.activePlayers = event.activePlayers.filter(current => {
+					const result = event.resultOL[current.playerid];
+					return result && result.bool;
+				});
+			} else {
+				break;
+			}
 		}
 	},
 	phase: [

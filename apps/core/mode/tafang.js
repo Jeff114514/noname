@@ -756,6 +756,7 @@ export default () => {
 					"step 8";
 					if (event.currentPlayers.length > 0) {
 						game.gameDraw(game.me, 4, event.currentPlayers);
+						game.replaceHandcardsAuto(event.currentPlayers.slice(0));
 						for (var target of event.currentPlayers) {
 							game.triggerEnter(target);
 						}
