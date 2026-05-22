@@ -7658,6 +7658,9 @@ export const Content = {
 				} else {
 					ui.create.buttonChooseAll();
 					game.check();
+					if (game.isFreeChooseEnabled() && game.isCharacterChooseDialog(event)) {
+						game.setupFreeChoose(event);
+					}
 					game.pause();
 				}
 			} else if (event.isOnline()) {
@@ -7681,6 +7684,7 @@ export const Content = {
 			}
 		},
 		async (event, trigger, player) => {
+			game.teardownFreeChoose();
 			const { forced } = event;
 			if (event.result == "ai") {
 				if (event.processAI) {

@@ -605,11 +605,17 @@ export const chooseCharacterOLContent = async (event, _trigger, _player) => {
 		list2.push([player, ["选择角色", [game.getCharacterChoice(characterList, num), "character"]], 2, true, () => Math.random(), filterButton]);
 	}
 
+	for (const item of list2) {
+		const pool = item[1]?.[1]?.[0];
+		if (pool?.length && item[0]?.playerid) {
+			game.setOLChoicePool(item[0].playerid, pool);
+		}
+	}
 	const next = game.me.chooseButtonOL(
 		list2,
 		(player, result) => {
 			if (game.online || player == game.me) {
-				player.init(result.links[0], result.links[1], false);
+				game.initPlayerFromOLResult(player, result, { initThird: false });
 			}
 		},
 		void 0

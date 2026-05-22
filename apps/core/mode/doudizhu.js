@@ -1293,6 +1293,7 @@ export default () => {
 					var map = {};
 					for (var player of game.players) {
 						player._characterChoice = event.list.randomRemove(lib.configOL["choice_" + player.identity]);
+						game.setOLChoicePool(player.playerid, player._characterChoice);
 						if (player.identity == "fan") {
 							player._friend = player.next.identity == "fan" ? player.next : player.previous;
 						}
@@ -1325,7 +1326,7 @@ export default () => {
 					}
 					game.me.chooseButtonOL(list, function (player, result) {
 						if (game.online || player == game.me) {
-							player.init(result.links[0]);
+							game.initPlayerFromOLResult(player, result);
 						}
 					});
 					"step 2";
@@ -1471,11 +1472,12 @@ export default () => {
 					var list = [];
 					var str = "选择角色";
 					for (var i = 0; i < game.players.length; i++) {
+						game.setOLChoicePool(game.players[i].playerid, event.map[game.players[i].playerid]);
 						list.push([game.players[i], [str, [event.map[game.players[i].playerid], "character"]], true]);
 					}
 					game.me.chooseButtonOL(list, function (player, result) {
 						if (game.online || player == game.me) {
-							player.init(result.links[0], result.links[1]);
+							game.initPlayerFromOLResult(player, result);
 						}
 					});
 					"step 4";
@@ -1563,6 +1565,7 @@ export default () => {
 					for (var player of game.players) {
 						var id = player.playerid;
 						event.map[id] = event.list.randomRemove(4);
+						game.setOLChoicePool(id, event.map[id]);
 					}
 					event.start = game.players.randomGet();
 					event.current = event.start;
@@ -1630,6 +1633,7 @@ export default () => {
 						player._characterChoice = event.map[player.playerid];
 					}
 					event.map[game.zhu.playerid].addArray(event.list.randomRemove(3));
+					game.setOLChoicePool(game.zhu.playerid, event.map[game.zhu.playerid]);
 					game.broadcastAll(
 						function (id, map) {
 							var dialog = get.idDialog(id);
@@ -1665,7 +1669,7 @@ export default () => {
 					}
 					game.me.chooseButtonOL(list, function (player, result) {
 						if (game.online || player == game.me) {
-							player.init(result.links[0]);
+							game.initPlayerFromOLResult(player, result);
 						}
 					});
 					"step 4";
@@ -1840,11 +1844,12 @@ export default () => {
 					game.broadcastAll("closeDialog", event.videoId);
 					var list = [];
 					for (var i = 0; i < game.players.length; i++) {
+						game.setOLChoicePool(game.players[i].playerid, event.map[game.players[i].playerid]);
 						list.push([game.players[i], ["选择" + (game.players[i] == game.zhu ? "两" : "一") + "张武将牌", [event.map[game.players[i].playerid], "character"]], true, game.players[i] == game.zhu ? 2 : 1]);
 					}
 					game.me.chooseButtonOL(list, function (player, result) {
 						if (game.online || player == game.me) {
-							player.init(result.links[0], result.links[1]);
+							game.initPlayerFromOLResult(player, result);
 						}
 					});
 					"step 4";
@@ -1974,11 +1979,13 @@ export default () => {
 					for (var i = 0; i < game.players.length; i++) {
 						var num3 = Math.min(num, lib.configOL["choice_" + game.players[i].identity]);
 						var str = "选择角色";
-						list.push([game.players[i], [str, [event.list.randomRemove(num3), "characterx"]], selectButton, true]);
+						var sublist = event.list.randomRemove(num3);
+						game.setOLChoicePool(game.players[i].playerid, sublist);
+						list.push([game.players[i], [str, [sublist, "characterx"]], selectButton, true]);
 					}
 					game.me.chooseButtonOL(list, function (player, result) {
 						if (game.online || player == game.me) {
-							player.init(result.links[0], result.links[1]);
+							game.initPlayerFromOLResult(player, result);
 						}
 					});
 					"step 2";

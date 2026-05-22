@@ -1329,19 +1329,40 @@ export default () => {
 						}
 						list.push(i);
 					}
-					game.broadcastAll(
-						function (list, id) {
-							_status.characterlist = list;
-							var filter = function (name) {
-								return !_status.characterlist.includes(name);
-							};
-							var dialog = ui.create.characterDialog("heightset", filter).open();
-							dialog.videoId = id;
-							ui.arena.classList.add("choose-character");
-						},
-						list,
-						event.videoId
-					);
+					_status.characterlist = list;
+					if (game.isFreeChooseEnabled()) {
+						game.broadcastAll(
+							function (list, id) {
+								_status.characterlist = list;
+								var filter = function (name) {
+									return !_status.characterlist.includes(name);
+								};
+								var dialog = ui.create.characterDialog("heightset", filter).open();
+								dialog.videoId = id;
+								ui.arena.classList.add("choose-character");
+							},
+							list,
+							event.videoId
+						);
+					} else {
+						var choice = {
+							zhu: list.randomRemove(3),
+							fan: list.randomRemove(3),
+						};
+						game.setOLChoicePool(game.zhu.playerid, choice.zhu);
+						game.setOLChoicePool(game.fan.playerid, choice.fan);
+						game.broadcastAll(
+							function (list, choice, id) {
+								_status.characterlist = list;
+								var dialog = ui.create.dialog("选择武将", [choice[game.me.identity], "character"]);
+								dialog.videoId = id;
+								ui.arena.classList.add("choose-character");
+							},
+							list,
+							choice,
+							event.videoId
+						);
+					}
 					game.zhu
 						.chooseButton(true)
 						.set("ai", function (button) {
@@ -1357,9 +1378,10 @@ export default () => {
 									return 2;
 								}
 								return 1;
-							})(lib.configOL.double_character)
+							}						)(lib.configOL.double_character)
 						)
-						.set("dialog", event.videoId);
+						.set("dialog", event.videoId)
+						.set("onfree", true);
 					"step 2";
 					game.broadcastAll(
 						function (player, character, id) {
@@ -1463,51 +1485,8 @@ export default () => {
 						zhu: _status.characterlist.randomRemove(6),
 						fan: _status.characterlist.randomRemove(6),
 					};
-					// 创建自由选将功能
-					const createCharacterDialog = function () {
-						if (get.config("free_choose")) {
-							event.dialogxx = ui.create.characterDialog("heightset");
-						} else {
-							event.dialogxx = ui.create.characterDialog("heightset");
-						}
-					};
-					if (lib.onfree) {
-						lib.onfree.push(createCharacterDialog);
-					} else {
-						createCharacterDialog();
-					}
-					ui.create.cheat2 = function () {
-						ui.cheat2 = ui.create.control("自由选将", function () {
-							if (this.dialog == _status.event.dialog) {
-								if (game.changeCoin) {
-									game.changeCoin(10);
-								}
-								this.dialog.close();
-								_status.event.dialog = this.backup;
-								this.backup.open();
-								delete this.backup;
-								game.uncheck();
-								game.check();
-							} else {
-								if (game.changeCoin) {
-									game.changeCoin(-10);
-								}
-								this.backup = _status.event.dialog;
-								_status.event.dialog.close();
-								_status.event.dialog = _status.event.parent.dialogxx;
-								this.dialog = _status.event.dialog;
-								this.dialog.open();
-								game.uncheck();
-								game.check();
-							}
-						});
-						if (lib.onfree) {
-							ui.cheat2.classList.add("disabled");
-						}
-					};
-					if (!ui.cheat2 && get.config("free_choose")) {
-						ui.create.cheat2();
-					}
+					game.setOLChoicePool(game.zhu.playerid, _status.characterChoice.zhu);
+					game.setOLChoicePool(game.fan.playerid, _status.characterChoice.fan);
 					const list = ["zhu", "fan"].map(identity => {
 						const dialog = ["请选择出场武将", '<div class="text center">本局游戏Buff</div>'];
 						game.globalBuff.forEach((buff, ind) => {
@@ -1518,7 +1497,7 @@ export default () => {
 					});
 					game.me.chooseButtonOL(list, function (player, result) {
 						if (game.online || player == game.me) {
-							player.init(result.links[0]);
+							game.initPlayerFromOLResult(player, result);
 							if (player == game.me) {
 								game.addRecentCharacter(result.links[0]);
 							}
@@ -1529,10 +1508,7 @@ export default () => {
 						}
 					});
 					"step 2";
-					if (ui.cheat2) {
-						ui.cheat2.close();
-						delete ui.cheat2;
-					}
+					game.teardownFreeChoose();
 					for (var i in result) {
 						var current = lib.playerOL[i];
 						if (result[i] == "ai") {
@@ -1849,7 +1825,7 @@ export default () => {
 					];
 					game.me.chooseButtonOL(list, function (player, result) {
 						if (game.online || player == game.me) {
-							player.init(result.links[0], result.links[1]);
+							game.initPlayerFromOLResult(player, result);
 						}
 					});
 					"step 9";

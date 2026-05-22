@@ -5784,6 +5784,13 @@ export class Library {
 							map.connect_special_identity.hide();
 						}
 					}
+					if (map.connect_free_choose) {
+						if (config.connect_identity_mode == "purple") {
+							map.connect_free_choose.hide();
+						} else {
+							map.connect_free_choose.show();
+						}
+					}
 				},
 				connect_identity_mode: {
 					name: "游戏模式",
@@ -6006,6 +6013,18 @@ export class Library {
 					frequent: false,
 					get intro() {
 						return lib.mode.identity.config.enable_mingcha.intro;
+					},
+				},
+				connect_free_choose: {
+					name: "自由选将",
+					init: false,
+					frequent: true,
+					restart: true,
+					onclick(bool) {
+						game.saveConfig("connect_free_choose", bool, "identity");
+						if (_status.connectMode && lib.configOL) {
+							lib.configOL.free_choose = bool;
+						}
 					},
 				},
 			},
@@ -6699,6 +6718,18 @@ export class Library {
 					frequent: true,
 					restart: true,
 				},
+				connect_free_choose: {
+					name: "自由选将",
+					init: false,
+					frequent: true,
+					restart: true,
+					onclick(bool) {
+						game.saveConfig("connect_free_choose", bool, "guozhan");
+						if (_status.connectMode && lib.configOL) {
+							lib.configOL.free_choose = bool;
+						}
+					},
+				},
 			},
 			config: {
 				update: function (config, map) {
@@ -7038,6 +7069,9 @@ export class Library {
 						map.connect_olfeiyang_four.hide();
 					}
 					map.connect_change_card.show();
+					if (map.connect_free_choose) {
+						map.connect_free_choose.show();
+					}
 				},
 				connect_versus_mode: {
 					name: "游戏模式",
@@ -7093,6 +7127,18 @@ export class Library {
 					init: false,
 					frequent: true,
 					restart: true,
+				},
+				connect_free_choose: {
+					name: "自由选将",
+					init: false,
+					frequent: true,
+					restart: true,
+					onclick(bool) {
+						game.saveConfig("connect_free_choose", bool, "versus");
+						if (_status.connectMode && lib.configOL) {
+							lib.configOL.free_choose = bool;
+						}
+					},
 				},
 			},
 			config: {
@@ -7736,6 +7782,9 @@ export class Library {
 						map.connect_enhance_nongmin.show();
 						map.connect_feiyang_version.show();
 					}
+					if (map.connect_free_choose) {
+						map.connect_free_choose.show();
+					}
 				},
 				connect_doudizhu_mode: {
 					name: "游戏模式",
@@ -7833,6 +7882,18 @@ export class Library {
 						online: "OL版本",
 						mobile: "手杀版本",
 						decade: "十周年版本",
+					},
+				},
+				connect_free_choose: {
+					name: "自由选将",
+					init: false,
+					frequent: true,
+					restart: true,
+					onclick(bool) {
+						game.saveConfig("connect_free_choose", bool, "doudizhu");
+						if (_status.connectMode && lib.configOL) {
+							lib.configOL.free_choose = bool;
+						}
 					},
 				},
 			},
@@ -8220,6 +8281,25 @@ export class Library {
 							map.connect_double_hp.hide();
 						}
 					}
+					if (map.connect_free_choose) {
+						if (config.connect_single_mode == "wuxianhuoli" || config.connect_single_mode == "dianjiang") {
+							map.connect_free_choose.show();
+						} else {
+							map.connect_free_choose.hide();
+						}
+					}
+				},
+				connect_free_choose: {
+					name: "自由选将",
+					init: false,
+					frequent: true,
+					restart: true,
+					onclick(bool) {
+						game.saveConfig("connect_free_choose", bool, "single");
+						if (_status.connectMode && lib.configOL) {
+							lib.configOL.free_choose = bool;
+						}
+					},
 				},
 			},
 			config: {
@@ -8778,7 +8858,9 @@ export class Library {
 					init: true,
 					onclick(bool) {
 						game.saveConfig("free_choose", bool, this._link.config.mode);
-						if (_status.connectMode) {
+						game.saveConfig("connect_free_choose", bool, this._link.config.mode);
+						if (_status.connectMode && lib.configOL) {
+							lib.configOL.free_choose = bool;
 							return;
 						}
 						if (get.mode() != this._link.config.mode || (!_status.event.getParent().showConfig && !_status.event.showConfig)) {

@@ -2872,7 +2872,7 @@ export default () => {
 						],
 						function (player, result) {
 							if (game.online || player == game.me) {
-								player.init(result.links[0]);
+								game.initPlayerFromOLResult(player, result);
 							}
 						}
 					);
@@ -2954,12 +2954,13 @@ export default () => {
 						if (current.identity == "zhong") {
 							var choice = event[current.side + "List"].randomRemove(2);
 							event.map[current.playerid] = choice;
+							game.setOLChoicePool(current.playerid, choice);
 							list.push([current, ["请选择武将", [choice, "characterx"]], true]);
 						}
 					});
 					game.me.chooseButtonOL(list, function (player, result) {
 						if (game.online || player == game.me) {
-							player.init(result.links[0]);
+							game.initPlayerFromOLResult(player, result);
 						}
 					});
 					"step 4";
@@ -3396,11 +3397,13 @@ export default () => {
 					var choose = [];
 					event.list = list;
 					for (var i = 0; i < game.players.length; i++) {
-						choose.push([game.players[i], ["选择出场和备用武将", [list.randomRemove(5), "character"]], 2, true]);
+						var sublist = list.randomRemove(5);
+						game.setOLChoicePool(game.players[i].playerid, sublist);
+						choose.push([game.players[i], ["选择出场和备用武将", [sublist, "character"]], 2, true]);
 					}
 					game.me.chooseButtonOL(choose, function (player, result) {
 						if (game.online || player == game.me) {
-							player.init(result.links[0]);
+							game.initPlayerFromOLResult(player, result);
 						}
 					});
 					"step 1";
@@ -3637,9 +3640,12 @@ export default () => {
 					//发送选择事件
 					var send = function () {
 						var next = game.me.chooseButton([1, 2], true);
+						next.set("onfree", true);
 						next.set("dialog", game._characterDialogID);
 						next.set("callback", function (player, result) {
-							player.init(result.links[0], null, null, false);
+							game.initPlayerFromOLResult(player, result, {
+								initArgs: links => [links[0], null, null, false],
+							});
 							var button = game._playerChoice;
 							button.classList.remove("glow2");
 							button.classList.add("selected");
@@ -4055,13 +4061,15 @@ export default () => {
 					_status.onreconnect = [func, _status.enemyDied, _status.friendDied, _status.enemy, _status.friend, game.versusHoverFriend, game.versusHoverEnemy, game.players[0].playerid];
 					game.broadcast(func, _status.enemyDied, _status.friendDied, _status.enemy, _status.friend, game.versusHoverFriend, game.versusHoverEnemy, game.players[0].playerid);
 
+					game.setOLChoicePool(game.players[0].playerid, _status.friend);
+					game.setOLChoicePool(game.players[1].playerid, _status.enemy);
 					var list = [
 						[game.players[0], ["选择出场角色", [_status.friend, "character"]]],
 						[game.players[1], ["选择出场角色", [_status.enemy, "character"]]],
 					];
 					game.me.chooseButtonOL(list, function (player, result) {
 						if (game.online || player == game.me) {
-							player.init(result.links[0]);
+							game.initPlayerFromOLResult(player, result);
 						}
 					});
 					"step 5";

@@ -17,6 +17,19 @@ import { DynamicStyle } from "./dynamic-style/index.js";
 import { GamePromises } from "./promises.js";
 import { Check } from "./check.js";
 import { roomConfig } from "./roomConfig.js";
+import {
+	isFreeChooseEnabled,
+	normalizeCharacterLink,
+	getOLCharacterPool,
+	isCharacterChooseDialog,
+	setOLChoicePool,
+	getOLChoicePool,
+	validateOLCharacterLinks,
+	sanitizeOLCharacterResult,
+	setupFreeChoose,
+	teardownFreeChoose,
+	initPlayerFromOLResult,
+} from "./connectFreeChoose.js";
 
 import { security } from "@/util/sandbox.js";
 import { save } from "@/util/config.js";
@@ -10873,6 +10886,17 @@ ${e instanceof Error ? e.stack : String(e)}`);
 		player.dieAfter();
 		return player;
 	}
+	isFreeChooseEnabled = isFreeChooseEnabled;
+	normalizeCharacterLink = normalizeCharacterLink;
+	getOLCharacterPool = getOLCharacterPool;
+	isCharacterChooseDialog = isCharacterChooseDialog;
+	setOLChoicePool = setOLChoicePool;
+	getOLChoicePool = getOLChoicePool;
+	validateOLCharacterLinks = validateOLCharacterLinks;
+	sanitizeOLCharacterResult = sanitizeOLCharacterResult;
+	setupFreeChoose = setupFreeChoose;
+	teardownFreeChoose = teardownFreeChoose;
+	initPlayerFromOLResult = initPlayerFromOLResult;
 }
 
 function attachRoomConfigBridge() {

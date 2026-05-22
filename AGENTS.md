@@ -96,6 +96,7 @@ packages:
 |------|------|----------|
 | `lib` | 静态库：技能表、卡牌表、武将表、翻译、配置、内容模板 | `noname/library/index.js` |
 | `game` | 游戏行为 API、事件创建、流程控制 | `noname/game/index.js` |
+| `game.connectFreeChoose` | 联机/单机自由选将：候选池记录、结果校验、UI 挂载 | `noname/game/connectFreeChoose.js`（经 `game` 挂载） |
 | `ui` | DOM 创建、界面交互、视觉呈现 | `noname/ui/index.js` |
 | `get` | 查询、计算、转换工具函数 | `noname/get/index.js` |
 | `ai` | AI 评估与决策逻辑 | `noname/ai/index.js` |
@@ -528,6 +529,35 @@ while (true) {
 
 联机手气卡配置读取：房间配置写入 `lib.configOL` 时会去掉 `connect_` 前缀，应使用 `game.getOLChangeCard()`（即 `lib.configOL.change_card`，并兼容 `connect_change_card`）。各模式开局请调用 `game.replaceHandcardsAuto(players)`，不要重复判断配置。
 
+**联机自由选将（`connectFreeChoose`）：**
+
+自由选将逻辑已抽到 `noname/game/connectFreeChoose.js`，并通过 `game` 对象对外暴露（`game.isFreeChooseEnabled`、`game.setupFreeChoose` 等）。修改联机选将或防作弊校验时，优先改该模块，避免在各模式重复实现 `ui.cheat2` 与校验代码。
+
+| 配置项 | 作用域 | 说明 |
+|--------|--------|------|
+| `free_choose` | 单机 + 联机 | 按模式保存在 `lib.config`；联机房间内也会同步到 `lib.configOL.free_choose` |
+| `connect_free_choose` | 联机房间 | 身份局、国战、对抗、斗地主、单挑等模式的房间项；`onclick` 写入 `lib.configOL.free_choose` |
+
+`game.isFreeChooseEnabled()`：联机时读 `lib.configOL.free_choose === true`（默认关闭），单机时读 `get.config("free_choose")`。
+
+核心 API（均在 `game` 上）：
+
+| 方法 | 用途 |
+|------|------|
+| `setupFreeChoose(event, options?)` / `teardownFreeChoose()` | 在选将 `dialog` 上挂载/移除「自由选将」控件（`ui.cheat2`），切换到全将池 `characterDialog` |
+| `setOLChoicePool(playerid, list)` / `getOLChoicePool(playerid)` | 主机记录每名玩家的随机候选框；客机提交选将时用于校验 |
+| `validateOLCharacterLinks` / `sanitizeOLCharacterResult` | 校验联机提交的 `result.links` 是否在合法池内 |
+| `initPlayerFromOLResult(player, result, options?)` | 校验通过后调用 `player.init`；非法且存在随机池时回退为池中随机一名 |
+| `getOLCharacterPool(extraFilter?)` | 联机合法全将池（自由选将开启时使用） |
+
+接入方式：
+
+1. **通用 `chooseControl` 选将**（`library/element/content.js`）：单机且 dialog 为武将选择时，若 `game.isFreeChooseEnabled()` 则自动 `setupFreeChoose`，步骤结束 `teardownFreeChoose`。
+2. **模式 OL 流程**（`chooseButtonOL` 等）：主机在分发候选前调用 `game.setOLChoicePool(playerid, sublist)`；回调内用 `game.initPlayerFromOLResult(player, result)` 替代直接 `player.init(...)`。已接入：身份局、国战、对抗、斗地主、单挑等。
+3. **模式内自建自由选将 UI**：设置 `event.onfree` / `next.set("onfree", true)`，并调用 `game.setupFreeChoose`；流程结束时调用 `game.teardownFreeChoose()`（参考 `single.js` 无限火力）。
+
+校验规则简述：自由选将开启时，提交的武将须在 `getOLCharacterPool()` 内（含 `characterReplace` 别名）；关闭时须在 `setOLChoicePool` 记录的随机候选内。修改新模式联机选将时，应同时处理上述记录与校验，否则客机可提交池外武将。
+
 技能定义参考：`docs/lib-skill-format.md`
 异步写法参考：`docs/async-guide.md`
 Step 转 Async 完整指南：`docs/step-to-async-guide.md`
@@ -635,6 +665,7 @@ pm2 start ecosystem.config.cjs
 7. **构建产物无哈希**：核心构建使用 `preserveModules: true` 且文件名不含内容哈希，因为游戏通过固定路径动态加载模块。
 8. **现代包 vs 旧包**：修改 `character/` 或 `mode/` 下的代码时，注意区分已现代化的目录结构包（有 `index.ts`，在 `moderned_characters` / `moderned_modes` 列表中）和传统的单文件包，它们的构建处理方式不同。
 9. **文件编码与缩进陷阱**：项目中的 `.js` 文件使用 **Tab 缩进** 和 **CRLF 换行**（`\r\n`），尤其是 `apps/core/noname/library/index.js` 这样的大文件。使用 `StrReplaceFile` 等工具时，如果直接复制 `ReadFile` 的输出，可能因换行符不匹配导致替换失败。遇到匹配失败时，应先用 `Shell` + Python 检查实际字节（`repr(open(..., 'rb').read())`），确认缩进字符（`\t` 或空格）和换行符（`\r\n` 或 `\n`）后再执行替换。
+10. **联机自由选将**：联机选将结果须经 `game.initPlayerFromOLResult` 与 `game.setOLChoicePool` 配合校验；UI 与全将池逻辑见 `noname/game/connectFreeChoose.js`，勿在模式里复制一套 `ui.cheat2`。
 
 ---
 
