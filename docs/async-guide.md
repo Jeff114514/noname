@@ -1,5 +1,7 @@
 # Async 章节
 
+本文介绍 **技能** `lib.skill.xxx.content` 的 async 写法。引擎内置事件（`phaseDraw`、`gameDraw` 等）定义在 `apps/core/noname/library/element/content.ts` 的 `Content` 对象中，与技能 content 是两套体系。Step 转 Async 与联机 OL 注意点见 `docs/step-to-async-guide.md`；Fork 定制见 `docs/fork-features.md`。
+
 无名杀在v1.10.6的时候由 @nonameShijian 引入了一种全新的技能效果代码写法，这种写法与原有写法最大的区别在于，这种写法的content函数是一个带有 `async`标识符的函数，而不是原来存在 `step`字样的普通函数。
 
 比如原来的写法是：

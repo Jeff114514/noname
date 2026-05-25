@@ -17,6 +17,15 @@
 
 代码仓库地址：https://github.com/libnoname/noname
 
+**本仓库为 Fork**（`Jeff114514/noname`），在 upstream `libnoname/noname` 基础上增加了房间配置云端同步、联机自由选将、一键部署脚本等定制功能。日常开发需同时关注上游更新与 Fork 特有逻辑。
+
+| 远程 | 用途 |
+|------|------|
+| `origin` | 本 Fork（推送目标） |
+| `upstream` | 上游官方仓库（拉取合并） |
+
+与上游同步推荐在本地执行 `git fetch upstream main && git merge upstream/main`；上游大版本曾将 `content.js` 重构为 `content.ts`（#3838），Git 会按重命名合并，一般不必手动搬运 diff。
+
 ---
 
 ## 技术栈
@@ -73,7 +82,10 @@ packages:
 | 目录 | 说明 |
 |------|------|
 | `noname/` | 核心引擎模块：ai、game、get、init、library、status、ui、util |
+| `noname/game/connectFreeChoose.js` | Fork：联机/单机自由选将（候选池、校验、UI） |
+| `noname/game/roomConfig.js` | Fork：房间配置云端保存与应用 |
 | `noname/library/element/` | 游戏事件系统（GameEvent）、玩家、卡牌、技能等基础元素 |
+| `noname/library/element/content.ts` | 内置事件步骤实现（原 `content.js`，已 TypeScript 化） |
 | `noname/init/` | 启动流程、配置加载、资源导入、安全沙箱 |
 | `mode/` | 游戏模式（如身份局 `identity`、国战 `guozhan` 等） |
 | `character/` | 武将包（standard、shenhua、sp、mobile、tw 等 26 个包） |
@@ -95,8 +107,7 @@ packages:
 | 对象 | 职责 | 对应文件 |
 |------|------|----------|
 | `lib` | 静态库：技能表、卡牌表、武将表、翻译、配置、内容模板 | `noname/library/index.js` |
-| `game` | 游戏行为 API、事件创建、流程控制 | `noname/game/index.js` |
-| `game.connectFreeChoose` | 联机/单机自由选将：候选池记录、结果校验、UI 挂载 | `noname/game/connectFreeChoose.js`（经 `game` 挂载） |
+| `game` | 游戏行为 API、事件创建、流程控制；挂载 `connectFreeChoose`、`roomConfig` 等子模块 | `noname/game/index.js` |
 | `ui` | DOM 创建、界面交互、视觉呈现 | `noname/ui/index.js` |
 | `get` | 查询、计算、转换工具函数 | `noname/get/index.js` |
 | `ai` | AI 评估与决策逻辑 | `noname/ai/index.js` |
@@ -108,8 +119,10 @@ packages:
 
 关键文件：
 - `noname/library/element/gameEvent.ts` —— GameEvent 实现
-- `noname/library/element/content.js` —— 内置事件内容（phase、draw、damage 等）
+- `noname/library/element/content.ts` —— 内置事件内容（phase、draw、damage、chooseControl 等）；上游 #3838 起由 `content.js` 迁移为 TypeScript，经 `element/index.js` 的 `export { Content } from "./content.ts"` 导出
 - `noname/library/element/GameEvent/compilers/` —— 内容编译器（Step / Async / Array）
+
+> **修改 `Content` 时**：只编辑 `content.ts`，勿再创建或引用 `content.js`。Fork 曾在旧版 `content.js` 中改过手气卡、房间按钮清理、自由选将挂载等逻辑，合并上游后这些改动应落在 `content.ts` 对应函数内。
 
 **GameEvent 核心机制：**
 
@@ -552,11 +565,13 @@ while (true) {
 
 接入方式：
 
-1. **通用 `chooseControl` 选将**（`library/element/content.js`）：单机且 dialog 为武将选择时，若 `game.isFreeChooseEnabled()` 则自动 `setupFreeChoose`，步骤结束 `teardownFreeChoose`。
+1. **通用 `chooseControl` 选将**（`library/element/content.ts` 内 `chooseControl` 步骤）：单机且 dialog 为武将选择时，若 `game.isFreeChooseEnabled()` 则自动 `setupFreeChoose`，步骤结束 `teardownFreeChoose`。
 2. **模式 OL 流程**（`chooseButtonOL` 等）：主机在分发候选前调用 `game.setOLChoicePool(playerid, sublist)`；回调内用 `game.initPlayerFromOLResult(player, result)` 替代直接 `player.init(...)`。已接入：身份局、国战、对抗、斗地主、单挑等。
 3. **模式内自建自由选将 UI**：设置 `event.onfree` / `next.set("onfree", true)`，并调用 `game.setupFreeChoose`；流程结束时调用 `game.teardownFreeChoose()`（参考 `single.js` 无限火力）。
 
 校验规则简述：自由选将开启时，提交的武将须在 `getOLCharacterPool()` 内（含 `characterReplace` 别名）；关闭时须在 `setOLChoicePool` 记录的随机候选内。修改新模式联机选将时，应同时处理上述记录与校验，否则客机可提交池外武将。
+
+**Fork 定制功能**（房间配置、联机自由选将、`content.ts` 改动、部署）：详见 `docs/fork-features.md`。
 
 技能定义参考：`docs/lib-skill-format.md`
 异步写法参考：`docs/async-guide.md`
@@ -664,8 +679,10 @@ pm2 start ecosystem.config.cjs
 6. **中文为主**：项目注释、文档、用户界面文本均以中文为主。涉及武将名、技能名、卡牌名时请使用游戏内的标准中文术语。
 7. **构建产物无哈希**：核心构建使用 `preserveModules: true` 且文件名不含内容哈希，因为游戏通过固定路径动态加载模块。
 8. **现代包 vs 旧包**：修改 `character/` 或 `mode/` 下的代码时，注意区分已现代化的目录结构包（有 `index.ts`，在 `moderned_characters` / `moderned_modes` 列表中）和传统的单文件包，它们的构建处理方式不同。
-9. **文件编码与缩进陷阱**：项目中的 `.js` 文件使用 **Tab 缩进** 和 **CRLF 换行**（`\r\n`），尤其是 `apps/core/noname/library/index.js` 这样的大文件。使用 `StrReplaceFile` 等工具时，如果直接复制 `ReadFile` 的输出，可能因换行符不匹配导致替换失败。遇到匹配失败时，应先用 `Shell` + Python 检查实际字节（`repr(open(..., 'rb').read())`），确认缩进字符（`\t` 或空格）和换行符（`\r\n` 或 `\n`）后再执行替换。
+9. **文件编码与缩进陷阱**：大量历史 `.js` 使用 **Tab 缩进** 和 **CRLF 换行**（`\r\n`），如 `library/index.js`；新迁移的 `content.ts` 等文件可能为 LF。替换前确认目标文件的实际换行与缩进，避免匹配失败。
 10. **联机自由选将**：联机选将结果须经 `game.initPlayerFromOLResult` 与 `game.setOLChoicePool` 配合校验；UI 与全将池逻辑见 `noname/game/connectFreeChoose.js`，勿在模式里复制一套 `ui.cheat2`。
+11. **内置事件内容在 `content.ts`**：手气卡（`replaceHandcards` / `replaceHandcardsOL`）、`gameStart` 清理、`chooseControl` 自由选将钩子等 Fork 改动均在此文件；合并上游后应用 `git diff` 或搜索 `getOLChangeCard`、`setupFreeChoose`、`roomConfigButton` 确认未丢失。
+12. **与上游合并**：存在 `upstream` 远程时定期 `git fetch upstream && git merge upstream/main`；若 GitHub 网页提示冲突而本地 merge 成功，以本地三方合并结果为准，合并后务必 `pnpm build` 并手测联机相关功能。
 
 ---
 
@@ -673,12 +690,14 @@ pm2 start ecosystem.config.cjs
 
 | 文档 | 内容 |
 |------|------|
+| `docs/fork-features.md` | **Fork 定制**：联机自由选将、房间配置、`content.ts` 改动、上游合并 |
 | `docs/how-to-start.md` | 环境搭建与启动指南 |
 | `docs/game-startup-flow.md` | 游戏从启动到进行时的完整流程 |
-| `docs/game-event-flow.md` | GameEvent 事件系统详解 |
+| `docs/game-event-flow.md` | GameEvent 事件系统详解（含 `content.ts` 内置事件表） |
 | `docs/async-guide.md` | Async Content 技能写法介绍 |
 | `docs/step-to-async-guide.md` | Step Content 转 Async Content 指南 |
 | `docs/lib-skill-format.md` | lib.skill 技能格式速查 |
 | `docs/skin-guide.md` | 皮肤制作指南 |
 | `docs/audio-guide.md` | 音频规范 |
 | `DEPLOYMENT.md` | 在线服务部署指南（含 Docker、Nginx、PM2、HTTPS） |
+| `deploy.sh` | Fork：一键部署脚本（依赖检查、build、PM2 启动） |

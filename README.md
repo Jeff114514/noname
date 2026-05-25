@@ -32,6 +32,8 @@ pnpm dev
 
 ---
 
+本 Fork（`Jeff114514/noname`）在官方仓库基础上增加了联机自由选将、房间配置云端同步等，说明见 [docs/fork-features.md](./docs/fork-features.md)。内置游戏事件实现位于 `apps/core/noname/library/element/content.ts`（上游 #3838 起由 `content.js` 迁移）。
+
 贡献代码可阅读相关文档：
 
 [Git 下载安装指南](https://github.com/libnoname/noname/wiki/Git%E4%B8%8B%E8%BD%BD%E5%AE%89%E8%A3%85%E6%8C%87%E5%8D%97)

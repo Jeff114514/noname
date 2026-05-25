@@ -8,6 +8,7 @@
 - `apps/core/noname/library/element/GameEvent/compilers/AsyncCompiler.ts`
 - `apps/core/noname/library/element/GameEvent/compilers/ArrayCompiler.ts`
 - `apps/core/noname/library/element/gameEvent.ts`
+- `apps/core/noname/library/element/content.ts` —— 内置事件（`phaseDraw`、`replaceHandcardsOL`、`chooseControl` 等；原 `content.js` 已迁移为 TypeScript）
 
 ## 总览
 
@@ -468,6 +469,28 @@ next.setContent(...);
 ```js
 await next;
 ```
+
+## 联机 OL：`replaceHandcardsOL` 中的 for 循环
+
+实现位于 `content.ts` 的 `Content.replaceHandcardsOL`（Fork 已按多轮置换、`activePlayers` 整理）。
+
+在联机 OL 事件中，**不要**在同一 `for` 里对远程玩家 `send` 后又 `await` 本地 `game.me` 的 `chooseBool`，否则循环阻塞，排在 `game.me` 之后的在线玩家收不到 `send`：
+
+```js
+// ❌ 同一循环内 await 会阻塞后续玩家的 send
+for (const current of event.players) {
+  if (current.isOnline()) {
+    current.send(send);
+    current.wait(sendback);
+  } else if (current == game.me) {
+    const result = await game.me.chooseBool("...").forResult();
+  }
+}
+```
+
+参考 `chooseCardOL` / `replaceHandcardsOL` 的写法：先向 `current != game.me` 的在线玩家 `send`，再在单独循环里处理 `game.me`；需要聚合结果时 `await game.pause()`。
+
+联机手气卡配置用 `game.getOLChangeCard()`；模式 `start` 中调用 `game.replaceHandcardsAuto(players)`。详见 `docs/fork-features.md`。
 
 ## 基础转换规则
 

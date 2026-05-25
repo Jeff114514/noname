@@ -1,6 +1,8 @@
 # 游戏启动到进行时流程速查
 
-本文根据 `apps/core/index.html`、`apps/core/noname/entry.ts`、`apps/core/noname/init/index.ts`、`apps/core/noname/game/index.js`、模式 `start` 以及 `phaseLoop` 相关代码整理，用于后续理解项目从启动到游戏进行时的主线。
+本文根据 `apps/core/index.html`、`apps/core/noname/entry.ts`、`apps/core/noname/init/index.ts`、`apps/core/noname/game/index.js`、内置事件 `library/element/content.ts`、模式 `start` 以及 `phaseLoop` 相关代码整理，用于后续理解项目从启动到游戏进行时的主线。
+
+> Fork 的联机自由选将、房间配置云端同步等见 `docs/fork-features.md`。
 
 ## 总览
 
@@ -466,7 +468,8 @@ next.setContent("gameDraw");
 处理特殊牌堆 otherPile
 设置 _start_cards
 处理双将/特殊摸牌
-必要时提供手气卡换牌
+单机：必要时在 `content.ts` 的 `gameDraw` 流程中进入 `replaceHandcards`（手气卡 UI）
+联机：由 `game.replaceHandcardsAuto(players)` 创建 `replaceHandcardsOL`（实现在 `content.ts`），配置来自 `game.getOLChangeCard()` / `lib.configOL.change_card`
 ```
 
 完成后，游戏进入回合循环。
@@ -683,6 +686,12 @@ gameStart
 - `randomMapOL()` 负责客户端座位映射
 - 玩家选择事件可能通过 `event.send()` 发给客户端
 - `_status.connectMode` 下部分错误处理、触发、同步逻辑不同
+
+**Fork 联机扩展（详见 `docs/fork-features.md`）：**
+
+- **房间配置：** 大厅 `ui.roomConfigButton` → `game.roomConfig` 云端读写；选项写入 `lib.configOL`
+- **自由选将：** `game.setOLChoicePool` + `game.initPlayerFromOLResult`；通用 `chooseControl` 在 `content.ts` 内自动 `setupFreeChoose`
+- **手气卡：** 模式 `start` 中调用 `game.replaceHandcardsAuto(players)`，勿重复解析 `change_card`
 
 但主线仍然一致：
 

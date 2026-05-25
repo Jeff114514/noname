@@ -1,6 +1,8 @@
 # GameEvent 事件流程速查
 
-本文根据 `apps/core/noname/library/element/gameEvent.ts` 及其配套的 `GameEventManager`、content 编译器整理，用于后续阅读事件系统时作为上下文。
+本文根据 `apps/core/noname/library/element/gameEvent.ts`、内置事件表 `content.ts` 及其配套的 `GameEventManager`、content 编译器整理，用于后续阅读事件系统时作为上下文。
+
+> 内置事件步骤（`phase`、`draw`、`damage`、`chooseControl`、`replaceHandcards` 等）自上游 #3838 起位于 **`content.ts`**（原 `content.js`）。Fork 定制说明见 `docs/fork-features.md`。
 
 ## 核心定位
 
@@ -66,7 +68,7 @@ event.setContent(function () {
 
 支持形式：
 
-- 字符串：从 `lib.element.content[name]` 或 `lib.element.contents[name]` 查找
+- 字符串：从 `lib.element.content[name]` 或 `lib.element.contents[name]` 查找（实现定义在 `element/content.ts` 的 `Content` 对象，加载时混入 `lib.element`）
 - async 函数：包装成标准事件 content
 - 普通函数：按旧式 `"step 0"`、`"step 1"` 语法解析
 - 函数数组：按步骤逐个执行
@@ -308,9 +310,30 @@ next.triggername = name;
 
 ## arrangeTrigger
 
-`arrangeTrigger` 的 content 在 `apps/core/noname/library/element/content.ts`。
+`arrangeTrigger` 的 content 在 `apps/core/noname/library/element/content.ts` 的 `Content.arrangeTrigger`。
 
-简化流程：
+## 内置 Content 对象（`content.ts`）
+
+`apps/core/noname/library/element/content.ts` 导出 `Content`，经 `element/index.js` 的 `export { Content } from "./content.ts"` 注册到 `lib.element.content`。
+
+常见内置事件名包括：
+
+```text
+phase / phaseDraw / phaseUse / gameDraw / gameStart
+damage / loseHp / die / chooseControl / chooseButton
+replaceHandcards / replaceHandcardsOL
+arrangeTrigger / createTrigger / ...
+```
+
+编写或阅读代码时：
+
+- 使用 `event.setContent("phaseDraw")` 时，查找的是 `Content.phaseDraw`（或对应数组/async 步骤）
+- 修改内置流程（发牌、手气卡、选将 dialog 等）应直接改 **`content.ts`**，不要新建 `content.js`
+- 技能 `lib.skill.xxx.content` 仍在各 `character/*/skill.js` 或模式 `skill` 中，与 `Content` 无关
+
+Fork 在 `content.ts` 中扩展了联机手气卡、`chooseControl` 自由选将挂载、`gameStart` 清理房间配置按钮等，详见 `docs/fork-features.md`。
+
+简化流程（`arrangeTrigger`）：
 
 ```text
 复制 doingList

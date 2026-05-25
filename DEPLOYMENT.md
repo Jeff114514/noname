@@ -1,5 +1,7 @@
 # Noname 在线服务部署指南
 
+> Fork 一键部署可使用根目录 `deploy.sh`（检查环境、`pnpm build`、PM2 启动静态服务与联机服务）。联机房间配置等定制说明见 `docs/fork-features.md`。
+
 ## 一、环境准备
 
 ### 1. 安装 Node.js

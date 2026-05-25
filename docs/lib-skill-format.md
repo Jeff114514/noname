@@ -2,6 +2,8 @@
 
 本文根据 `apps/core/character/standard/skill.js` 中的标准包技能代码整理，用于后续阅读或编写 `lib.skill` 技能对象时作为上下文。
 
+> 技能 `content` 与引擎内置事件 `Content`（`library/element/content.ts`）不同。Async 写法见 `docs/async-guide.md`；Fork 联机选将等见 `docs/fork-features.md`。
+
 `lib.skill` 本质是一个技能表：
 
 ```js
