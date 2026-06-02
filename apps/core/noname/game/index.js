@@ -26,6 +26,12 @@ import {
 	getOLChoicePool,
 	validateOLCharacterLinks,
 	sanitizeOLCharacterResult,
+	handleFreeChooseCharacterButton,
+	resetFreeChooseSelection,
+	refreshFreeChooseDialogCheck,
+	installFreeChooseFilterButton,
+	installFreeChooseButtonHandler,
+	createFreeChooseCheat2,
 	setupFreeChoose,
 	teardownFreeChoose,
 	closeOLCharacterChooseDialogs,
@@ -10903,6 +10909,12 @@ ${e instanceof Error ? e.stack : String(e)}`);
 	getOLChoicePool = getOLChoicePool;
 	validateOLCharacterLinks = validateOLCharacterLinks;
 	sanitizeOLCharacterResult = sanitizeOLCharacterResult;
+	handleFreeChooseCharacterButton = handleFreeChooseCharacterButton;
+	resetFreeChooseSelection = resetFreeChooseSelection;
+	refreshFreeChooseDialogCheck = refreshFreeChooseDialogCheck;
+	installFreeChooseFilterButton = installFreeChooseFilterButton;
+	installFreeChooseButtonHandler = installFreeChooseButtonHandler;
+	createFreeChooseCheat2 = createFreeChooseCheat2;
 	setupFreeChoose = setupFreeChoose;
 	teardownFreeChoose = teardownFreeChoose;
 	closeOLCharacterChooseDialogs = closeOLCharacterChooseDialogs;

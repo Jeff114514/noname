@@ -2068,10 +2068,12 @@ const skills = {
 					})
 					.setContent(async function (event, trigger, player) {
 						const { cards, moved } = event,
-							hs = player.getCards("h");
-						const gain = moved[1].filter(card => !hs.includes(card)),
-							puts = moved[0].filter(card => hs.includes(card)),
-							originPile = cards.slice().removeArray(hs);
+							hs = player.getCards("h") || [];
+						const pileMoved = moved[0] || [],
+							handMoved = moved[1] || [];
+						const gain = handMoved.filter(card => !hs.includes(card)),
+							puts = pileMoved.filter(card => hs.includes(card)),
+							originPile = (cards || []).slice().removeArray(hs);
 						//将手牌中有变动的和牌堆顶的牌送入处理区
 						if (puts.length) {
 							player.$throw(puts.length, 1000);
@@ -2086,9 +2088,9 @@ const skills = {
 							player.directgain(moved[1].slice().reverse(), false);*/
 						}
 						//牌堆部分
-						await game.cardsGotoPile(moved[0].slice().reverse(), ["insert_card", true]);
+						await game.cardsGotoPile(pileMoved.slice().reverse(), ["insert_card", true]);
 						//知情牌
-						game.addCardKnower(moved[0], player);
+						game.addCardKnower(pileMoved, player);
 					});
 			}
 			if (!game.hasPlayer(current => current != player)) {
@@ -2106,7 +2108,7 @@ const skills = {
 				const [target] = result.targets;
 				player.line(target, "thunder");
 				let showCards = [];
-				const top = get.cards(5, true);
+				const pileTop = get.cards(5, true);
 				if (player.countCards("h")) {
 					const dialog = [];
 					dialog.push("星魂：请选择五张牌");
@@ -2116,34 +2118,29 @@ const skills = {
 					} else {
 						dialog.push([player.getCards("h"), "blank"]);
 					}
-					dialog.addArray([`<div class="text center">牌堆顶</div>`, [top, "blank"]]);
+					dialog.addArray([`<div class="text center">牌堆顶</div>`, [pileTop, "blank"]]);
 					const result = await target
 						.chooseButton(5, true)
 						.set("createDialog", dialog)
-						.set("top", top)
+						.set("top", pileTop)
 						.set("target", player)
 						.set("ai", () => Math.random())
 						.forResult();
 					showCards = result?.links || [];
 				} else {
-					showCards = top;
+					showCards = pileTop;
 				}
 				await target
 					.showCards(showCards, `${get.translation(target)}因“${get.translation(event.name)}”展示`)
-					.set("customButton", button => {
-						if (get.event().top.includes(button.link)) {
-							button.node.gaintag.innerHTML = "牌堆顶";
-						}
-					})
-					.set("top", top)
+					.set("top", pileTop)
 					.set("delay_time", 5);
 				if (showCards.some(card => get.name(card) == "sha")) {
 					let sha = showCards.filter(card => get.name(card) == "sha");
 					while (sha.length) {
 						let card = sha.shift();
 						if (player.canUse(card, target, false, false)) {
-							if (top.includes(card)) {
-								top.remove(card);
+							if (pileTop.includes(card)) {
+								pileTop.remove(card);
 							}
 							await player.useCard(card, target, false);
 						}

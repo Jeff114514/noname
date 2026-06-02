@@ -576,7 +576,7 @@ while (true) {
 技能定义参考：`docs/lib-skill-format.md`
 异步写法参考：`docs/async-guide.md`
 Step 转 Async 完整指南：`docs/step-to-async-guide.md`
-启动与事件流程参考：`docs/game-startup-flow.md`、`docs/game-event-flow.md`
+启动与事件流程参考：`docs/game-startup-flow.md`、`docs/game-event/index.md`
 
 ---
 
@@ -695,7 +695,7 @@ pm2 start ecosystem.config.cjs
 | `docs/agent-debugging.md` | **Agent 调试**：禁止 ingest HTTP、文件日志、dist 同步、埋点清理 |
 | `docs/how-to-start.md` | 环境搭建与启动指南 |
 | `docs/game-startup-flow.md` | 游戏从启动到进行时的完整流程 |
-| `docs/game-event-flow.md` | GameEvent 事件系统详解（含 `content.ts` 内置事件表） |
+| `docs/game-event/index.md` | GameEvent 事件系统（含 `content.ts` 内置事件表，见 `docs/game-event/` 目录） |
 | `docs/async-guide.md` | Async Content 技能写法介绍 |
 | `docs/step-to-async-guide.md` | Step Content 转 Async Content 指南 |
 | `docs/lib-skill-format.md` | lib.skill 技能格式速查 |

@@ -63,7 +63,8 @@ node scripts/agent-debug-append.mjs '{"location":"versus.js:OL2","message":"butt
 1. 改源码（`apps/core/mode/`、`apps/core/noname/` 等）
 2. 在仓库 `noname` 根目录执行 **`pnpm build`**
 3. 构建会自动：
-   - `apps/core`：`buildIndividual("mode")` 将 `mode/` 下非入口文件复制到 `apps/core/dist/mode/`（`build.ts` 中 `viteStaticCopy` + 构建结束后的 `syncStaticPackageFiles` 覆盖同步）
+   - `apps/core`：`buildIndividual("mode")` 将 `mode/` 下非入口文件复制到 `apps/core/dist/mode/`（`viteStaticCopy` + 构建结束后的 `syncStaticPackageFiles` 覆盖同步）。**非 moderned 武将包**（如 `character/shiji/`）也在此同步；目录同步前会先 `rmSync` 再 `cpSync`，否则 Node 不会覆盖目标目录里已有文件。
+   - 联机沙盒 `broadcast` 中勿用裸标识符 **`top`**（会解析为 `window.top`），牌堆顶请用 `event.top` 传参或 `showCards` 的 `.set("top", cards)`（由 `content.ts` 的 `pileTop` 参数处理）。
    - 根目录：`scripts/build.ts` 将 `apps/core/dist` 合并到 **`noname/dist/`**
 4. **无需** 手动 `cp mode/versus.js` 到 dist；若 dist 仍像旧版，先完整跑一遍 `pnpm build` 再强制刷新浏览器
 

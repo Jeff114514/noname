@@ -7554,10 +7554,11 @@ export const Content: Record<string, ContentFuncByAll | ContentFuncsByAll> = {
 					event.dialog.close();
 				} else {
 					ui.create.buttonChooseAll();
-					game.check();
 					if (game.isFreeChooseEnabled() && game.isCharacterChooseDialog(event)) {
 						game.setupFreeChoose(event);
+						game.resetFreeChooseSelection();
 					}
+					game.check();
 					game.pause();
 				}
 			} else if (event.isOnline()) {
@@ -9378,7 +9379,7 @@ export const Content: Record<string, ContentFuncByAll | ContentFuncsByAll> = {
 			}
 			event.dialog = get.idDialog(event.videoId);
 
-			const createDialog = (cards2, id, customButton) => {
+			const createDialog = (cards2, id, customButton, pileTop) => {
 				const dialog = get.idDialog(id);
 				dialog.forcebutton = true;
 				//dialog.style.display = "none";
@@ -9391,6 +9392,14 @@ export const Content: Record<string, ContentFuncByAll | ContentFuncsByAll> = {
 						}
 					}
 				}
+				// event.top：牌堆顶牌列表（须经 broadcast 传参，勿在 customButton 闭包中用 top，沙盒会解析为 window.top）
+				if (Array.isArray(pileTop)) {
+					for (const button of dialog.buttons) {
+						if (pileTop.includes(button.link)) {
+							button.node.gaintag.innerHTML = "牌堆顶";
+						}
+					}
+				}
 				//允许自定义展示牌时对话框里的按钮
 				if (typeof customButton == "function") {
 					dialog.buttons.forEach(button => customButton(button));
@@ -9398,16 +9407,18 @@ export const Content: Record<string, ContentFuncByAll | ContentFuncsByAll> = {
 				//dialog.style.display = "";
 			};
 			const customButton = event.customButton || (() => {});
+			const pileTop = event.top;
 			//创建对话框
-			createDialog(event.hiddencards, event.videoId, customButton);
+			createDialog(event.hiddencards, event.videoId, customButton, pileTop);
 			game.broadcast(
-				(func, cards2, id, customButton) => {
-					func(cards2, id, customButton);
+				(func, cards2, id, customButton, pileTop) => {
+					func(cards2, id, customButton, pileTop);
 				},
 				createDialog,
 				event.hiddencards,
 				event.videoId,
-				customButton
+				customButton,
+				pileTop
 			);
 			//处理历史记录的log
 			game.addVideo("showCards", player, [event.str, get.cardsInfo(cards)]);

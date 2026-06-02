@@ -93,14 +93,10 @@ main() {
     log_success "依赖安装完成"
     echo ""
 
-    # 3. 构建项目
+    # 3. 构建项目（始终执行：会编译本体并同步 mode/versus.js、noname/** 等到 dist）
     log_info "步骤 3/6: 构建游戏核心"
-    if [ ! -d "dist" ]; then
-        pnpm build
-        log_success "游戏核心构建完成"
-    else
-        log_warning "dist 目录已存在，跳过构建 (如需重新构建请先删除 dist 目录)"
-    fi
+    pnpm build
+    log_success "游戏核心构建完成（已合并 apps/core/dist → dist）"
     echo ""
 
     # 4. 构建服务器

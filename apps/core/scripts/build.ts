@@ -1,6 +1,7 @@
 import { build } from "vite";
 import { join, dirname } from "path";
-import { copyFileSync, cpSync, existsSync, readdirSync, statSync } from "fs";
+import { fileURLToPath } from "url";
+import { copyFileSync, cpSync, existsSync, readdirSync, rmSync, statSync } from "fs";
 import { Target, viteStaticCopy } from "vite-plugin-static-copy";
 import generateImportMap from "./vite-plugin-importmap";
 import jit from "@noname/jit";
@@ -89,8 +90,10 @@ async function main() {
 		}
 	}
 
-	// 编译无名杀本体
+	// 编译无名杀本体（Rollup → dist/noname/**；viteStaticCopy → dist/src/noname 等）
 	await buildSelf(target, importMap, staticModules);
+	// 覆盖 dist/src/noname，避免 vite 增量复制留下陈旧 .ts/.js（如 connectFreeChoose.js）
+	syncSourceMirror();
 
 	// 编译脱离本体单独输出的包体
 	for (const [type, content] of Object.entries(individuals)) {
@@ -115,9 +118,29 @@ async function main() {
 		}
 
 		await buildIndividual(type, target, input, importMap, copies);
-		// 非 Rollup 入口的 mode/card/character 文件（如 versus.js）每次从源码同步到 dist
+		// 非 Rollup 入口的顶层文件（如 mode/versus.js、character/shiji/skill.js）从源码强制覆盖到 dist/{type}/
 		syncStaticPackageFiles(type, input);
 	}
+}
+
+/**
+ * 根目录 `pnpm build`（scripts/build.ts）会把 apps/core/dist 合并到仓库根 dist/。
+ * 仅改源码后须执行根目录构建；勿只改 apps/core/dist 或手动 cp，否则 nginx 仍可能读到旧文件。
+ */
+
+/**
+ * 将 `noname/` 源码镜像同步到 `dist/src/noname/`（供 JIT / import 使用，避免 viteStaticCopy 留下陈旧 .ts）。
+ */
+function syncSourceMirror() {
+	const src = join(root, "noname");
+	const dest = join(root, "dist", "src", "noname");
+	if (!existsSync(src)) {
+		return;
+	}
+	if (existsSync(dest)) {
+		rmSync(dest, { recursive: true, force: true });
+	}
+	cpSync(src, dest, { recursive: true });
 }
 
 /**
@@ -136,6 +159,10 @@ function syncStaticPackageFiles(type: string, input: Record<string, string>) {
 		const src = join(srcDir, file);
 		const dest = join(destDir, file);
 		if (statSync(src).isDirectory()) {
+			// 目标目录已存在时 Node 的 cpSync 不会覆盖其中已有文件，须先删除
+			if (existsSync(dest)) {
+				rmSync(dest, { recursive: true, force: true });
+			}
 			cpSync(src, dest, { recursive: true });
 		} else {
 			copyFileSync(src, dest);
@@ -250,6 +277,10 @@ interface IndividualContent {
 	moderned: boolean;
 }
 
-if (import.meta.main) {
+// tsx 下 import.meta.main 可能为 undefined，需用 argv 判断是否直接执行本脚本
+const isBuildScriptEntry =
+	import.meta.main === true ||
+	(process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]);
+if (isBuildScriptEntry) {
 	await main();
 }

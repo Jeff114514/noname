@@ -1438,7 +1438,10 @@ export default () => {
 						basenum *= 2;
 					}
 					var dialog = ui.create.dialog(basestr, [characterChoice, "characterx"]);
-					game.me.chooseButton(true, dialog, basenum).set("onfree", true);
+					var chooseEvt = game.me
+						.chooseButton(true, dialog, basenum)
+						.set("onfree", true)
+						.set("complexSelect", false);
 					if (!_status.brawl || !_status.brawl.noAddSetting) {
 						if (get.config("change_identity")) {
 							addSetting(dialog);
@@ -1476,46 +1479,12 @@ export default () => {
 					} else {
 						event.dialogxx = ui.create.characterDialog("heightset");
 					}
-					ui.create.cheat2 = function () {
-						ui.cheat2 = ui.create.control("自由选将", function () {
-							if (this.dialog == _status.event.dialog) {
-								if (game.changeCoin) {
-									game.changeCoin(10);
-								}
-								this.dialog.close();
-								_status.event.dialog = this.backup;
-								this.backup.open();
-								delete this.backup;
-								game.uncheck();
-								game.check();
-								if (ui.cheat) {
-									ui.cheat.addTempClass("controlpressdownx", 500);
-									ui.cheat.classList.remove("disabled");
-								}
-							} else {
-								if (game.changeCoin) {
-									game.changeCoin(-10);
-								}
-								this.backup = _status.event.dialog;
-								_status.event.dialog.close();
-								_status.event.dialog = _status.event.parent.dialogxx;
-								this.dialog = _status.event.dialog;
-								this.dialog.open();
-								game.uncheck();
-								game.check();
-								if (ui.cheat) {
-									ui.cheat.classList.add("disabled");
-								}
-							}
-						});
-						ui.cheat2.classList.add("disabled");
-					};
 					if (!_status.brawl || !_status.brawl.chooseCharacterFixed) {
 						if (!ui.cheat && get.config("change_choice")) {
 							ui.create.cheat();
 						}
-						if (!ui.cheat2 && get.config("free_choose")) {
-							ui.create.cheat2();
+						if (get.config("free_choose")) {
+							game.createFreeChooseCheat2(chooseEvt);
 						}
 					}
 					"step 1";
@@ -3601,6 +3570,9 @@ export default () => {
 					var choose = {};
 					event.list = list;
 					_status.characterlist = list4;
+					game.broadcast(function (list) {
+						_status.characterlist = list;
+					}, list4);
 					//推荐队友选将
 					//给所有人生成对话框
 					for (var i = 0; i < game.players.length; i++) {
@@ -3639,8 +3611,10 @@ export default () => {
 					);
 					//发送选择事件
 					var send = function () {
-						var next = game.me.chooseButton([1, 2], true);
+						var next = game.me.chooseButton(true);
+						next.set("selectButton", [1, 2]);
 						next.set("onfree", true);
+						next.set("complexSelect", false);
 						next.set("closeDialog", true);
 						next.set("dialog", game._characterDialogID);
 						next.set("callback", function (player, result) {
@@ -3675,26 +3649,12 @@ export default () => {
 						next.set("custom", {
 							replace: {
 								button: function (button) {
-									var dialog = get.idDialog(game._characterDialogID) || _status.event.dialog;
-									// 自由选将会关闭原 videoId dialog，此时走默认选将按钮逻辑
-									if (!dialog || !dialog.players) {
-										if (!_status.event.isMine()) {
-											return;
-										}
-										if (!button.classList.contains("selectable")) {
-											return;
-										}
-										if (button.classList.contains("selected")) {
-											ui.selected.buttons.remove(button);
-											button.classList.remove("selected");
-											if (_status.multitarget || _status.event.complexSelect) {
-												game.uncheck();
-											}
-										} else {
-											button.classList.add("selected");
-											ui.selected.buttons.add(button);
-										}
-										game.check();
+									if (game.isFreeChooseEnabled() && _status.event.dialog === _status.event.dialogxx) {
+										game.handleFreeChooseCharacterButton(button);
+										return;
+									}
+									var dialog = get.idDialog(game._characterDialogID);
+									if (!dialog?.players) {
 										return;
 									}
 									var origin = button._link,
@@ -3756,6 +3716,8 @@ export default () => {
 							},
 							add: {},
 						});
+						game.installFreeChooseButtonHandler(next);
+						game.resetFreeChooseSelection();
 						if (game.online) {
 							game.resume();
 						}
