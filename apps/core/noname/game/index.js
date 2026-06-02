@@ -28,6 +28,7 @@ import {
 	sanitizeOLCharacterResult,
 	setupFreeChoose,
 	teardownFreeChoose,
+	closeOLCharacterChooseDialogs,
 	initPlayerFromOLResult,
 } from "./connectFreeChoose.js";
 
@@ -10904,6 +10905,7 @@ ${e instanceof Error ? e.stack : String(e)}`);
 	sanitizeOLCharacterResult = sanitizeOLCharacterResult;
 	setupFreeChoose = setupFreeChoose;
 	teardownFreeChoose = teardownFreeChoose;
+	closeOLCharacterChooseDialogs = closeOLCharacterChooseDialogs;
 	initPlayerFromOLResult = initPlayerFromOLResult;
 }
 

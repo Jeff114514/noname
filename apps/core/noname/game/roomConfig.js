@@ -1,4 +1,4 @@
-import { game, lib, _status } from "noname";
+import { game, get, lib, ui, _status } from "noname";
 
 /**
  * 房间配置云端同步模块
@@ -275,7 +275,104 @@ export const roomConfig = {
 			game.saveConfig("cards", lib.config.cards);
 		}
 
+		if (_status.connectMode && lib.configOL) {
+			const olMode = configMode || lib.config.connect_mode || lib.configOL.mode;
+			roomConfig.syncConfigOL(olMode);
+			roomConfig.pushConfigOLToRoom();
+		}
+
 		roomConfig._emit("configApplied", config);
+	},
+
+	/**
+	 * 从已保存的联机配置（lib.config / mode_config）重建 lib.configOL
+	 * @param {string} [mode] 模式 id
+	 * @returns {boolean}
+	 */
+	syncConfigOL(mode) {
+		const name = mode || lib.configOL?.mode || lib.config.connect_mode;
+		if (!_status.connectMode || !lib.configOL || !name || !lib.mode[name]?.connect) {
+			return false;
+		}
+		lib.configOL.mode = name;
+		for (const key in lib.mode[name].connect) {
+			if (key === "update") {
+				continue;
+			}
+			lib.configOL[key.slice(8)] = get.config(key, name);
+		}
+		lib.configOL.zhinang_tricks = lib.config.connect_zhinang_tricks;
+		lib.configOL.characterPack = lib.connectCharacterPack.slice(0);
+		lib.configOL.cardPack = lib.connectCardPack.slice(0);
+		for (let i = 0; i < lib.config.connect_characters.length; i++) {
+			lib.configOL.characterPack.remove(lib.config.connect_characters[i]);
+		}
+		for (let i = 0; i < lib.config.connect_cards.length; i++) {
+			lib.configOL.cardPack.remove(lib.config.connect_cards[i]);
+		}
+		lib.configOL.banned = lib.config[`connect_${name}_banned`];
+		lib.configOL.bannedcards = lib.config[`connect_${name}_bannedcards`];
+		return true;
+	},
+
+	/**
+	 * 将当前 lib.configOL 推送到联机房间（等待界面 / 自建房）
+	 */
+	pushConfigOLToRoom() {
+		if (!_status.connectMode || !lib.configOL) {
+			return;
+		}
+		const mode = lib.configOL.mode;
+		if (!mode || !lib.mode[mode]?.connect) {
+			return;
+		}
+		if (ui.connectStartBar) {
+			ui.connectStartBar.firstChild.innerHTML = get.modetrans(lib.configOL, true);
+		}
+		if (!_status.waitingForPlayer) {
+			if (game.onlineroom) {
+				game.send("server", "config", lib.configOL);
+			}
+			return;
+		}
+		const patch = {};
+		for (const key in lib.mode[mode].connect) {
+			if (key === "update") {
+				continue;
+			}
+			patch[key.slice(8)] = lib.configOL[key.slice(8)];
+		}
+		patch.zhinang_tricks = lib.configOL.zhinang_tricks;
+		if (game.online) {
+			if (game.onlinezhu) {
+				game.send("changeRoomConfig", patch);
+			}
+		} else {
+			game.broadcastAll(
+				function (config) {
+					for (const k in config) {
+						lib.configOL[k] = config[k];
+					}
+					if (ui.connectStartBar) {
+						ui.connectStartBar.firstChild.innerHTML = get.modetrans(lib.configOL, true);
+					}
+				},
+				patch
+			);
+			if (lib.configOL.mode == "identity" && lib.configOL.identity_mode == "zhong" && game.connectPlayers) {
+				for (let i = 0; i < game.connectPlayers.length; i++) {
+					game.connectPlayers[i].classList.remove("unselectable2");
+				}
+				lib.configOL.number = 8;
+				game.updateWaiting();
+			}
+			if (game.onlineroom) {
+				game.send("server", "config", lib.configOL);
+			}
+			if (game.connectPlayers?.[0]) {
+				game.connectPlayers[0].chat("房间设置已更改");
+			}
+		}
 	},
 
 	/**

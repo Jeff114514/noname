@@ -3641,15 +3641,18 @@ export default () => {
 					var send = function () {
 						var next = game.me.chooseButton([1, 2], true);
 						next.set("onfree", true);
+						next.set("closeDialog", true);
 						next.set("dialog", game._characterDialogID);
 						next.set("callback", function (player, result) {
 							game.initPlayerFromOLResult(player, result, {
 								initArgs: links => [links[0], null, null, false],
 							});
 							var button = game._playerChoice;
-							button.classList.remove("glow2");
-							button.classList.add("selected");
-							delete game._playerChoice;
+							if (button) {
+								button.classList.remove("glow2");
+								button.classList.add("selected");
+								delete game._playerChoice;
+							}
 						});
 						//托管选择
 						next.set("ai", function (button) {
@@ -3657,6 +3660,9 @@ export default () => {
 								return 0;
 							}
 							var dialog = get.idDialog(game._characterDialogID);
+							if (!dialog) {
+								return 0.5 + Math.random();
+							}
 							if (dialog.friends && dialog.friends.includes(button)) {
 								return 0;
 							}
@@ -3669,7 +3675,28 @@ export default () => {
 						next.set("custom", {
 							replace: {
 								button: function (button) {
-									var dialog = get.idDialog(game._characterDialogID);
+									var dialog = get.idDialog(game._characterDialogID) || _status.event.dialog;
+									// 自由选将会关闭原 videoId dialog，此时走默认选将按钮逻辑
+									if (!dialog || !dialog.players) {
+										if (!_status.event.isMine()) {
+											return;
+										}
+										if (!button.classList.contains("selectable")) {
+											return;
+										}
+										if (button.classList.contains("selected")) {
+											ui.selected.buttons.remove(button);
+											button.classList.remove("selected");
+											if (_status.multitarget || _status.event.complexSelect) {
+												game.uncheck();
+											}
+										} else {
+											button.classList.add("selected");
+											ui.selected.buttons.add(button);
+										}
+										game.check();
+										return;
+									}
 									var origin = button._link,
 										choice = button.link;
 									//选择按钮时自动取消选择上一个按钮
@@ -3739,13 +3766,14 @@ export default () => {
 							return;
 						}
 						var dialog = get.idDialog(game._characterDialogID);
-						if (dialog) {
-							for (var button of dialog.players) {
-								if (button._link == choice) {
-									button.classList.add("glow2");
-								} else if (button.classList.contains("glow2")) {
-									button.classList.remove("glow2");
-								}
+						if (!dialog?.players) {
+							return;
+						}
+						for (var button of dialog.players) {
+							if (button._link == choice) {
+								button.classList.add("glow2");
+							} else if (button.classList.contains("glow2")) {
+								button.classList.remove("glow2");
 							}
 						}
 					};
@@ -3759,7 +3787,7 @@ export default () => {
 							return;
 						}
 						var dialog = get.idDialog(game._characterDialogID);
-						if (!dialog) {
+						if (!dialog?.friends) {
 							return;
 						}
 						for (var button of dialog.friends) {

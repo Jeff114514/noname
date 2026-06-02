@@ -17,6 +17,8 @@ pnpm build
 
 上游 #3838 已将内置事件实现从 `content.js` 迁移为 **`content.ts`**。合并时 Git 通常按文件重命名（相似度约 86%）自动合并；Fork 曾在 `content.js` 中的改动应落在 `content.ts` 内。合并后搜索 `getOLChangeCard`、`setupFreeChoose`、`roomConfigButton` 确认未丢失。
 
+**Agent 调试**：勿用 `localhost:7430/ingest`；日志写 `.cursor/debug.log` 或 `console.debug('[agent-debug]')`，改 `mode/*.js` 后核对 `dist/mode`。见 [`docs/agent-debugging.md`](agent-debugging.md)。
+
 ---
 
 ## 联机自由选将（`connectFreeChoose`）
@@ -57,7 +59,7 @@ pnpm build
 | 能力 | 说明 |
 |------|------|
 | 保存/加载/删除 | `saveCloudConfig`、`getCloudConfigs`、`deleteCloudConfig` 等 |
-| 应用到房间 | 写入 `lib.configOL` |
+| 应用到房间 | 写入 `lib.config`；若在联机中则 `syncConfigOL` + `pushConfigOLToRoom` 同步 `lib.configOL`（与是否覆盖单机配置无关） |
 | UI | `library/index.js` 创建 `ui.roomConfigButton`；`content.ts` 的 `gameStart` 等流程清理该按钮 |
 
 `lib.configOL` 写入时会去掉 `connect_` 前缀；手气卡等联机选项用 `game.getOLChangeCard()`（兼容 `connect_change_card`）。

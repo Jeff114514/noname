@@ -7581,7 +7581,7 @@ export const Content: Record<string, ContentFuncByAll | ContentFuncsByAll> = {
 			}
 		},
 		async (event, trigger, player) => {
-			game.teardownFreeChoose();
+			game.teardownFreeChoose(event);
 			const { forced } = event;
 			if (event.result == "ai") {
 				if (event.processAI) {
@@ -7595,8 +7595,15 @@ export const Content: Record<string, ContentFuncByAll | ContentFuncsByAll> = {
 					}
 				}
 			}
-			if (event.closeDialog) {
+			if (event.closeDialog && event.dialog) {
+				if (event.dialog.delay) {
+					clearInterval(event.dialog.delay);
+					delete event.dialog.delay;
+				}
 				event.dialog.close();
+			}
+			if (game._characterDialogID != null && game.closeOLCharacterChooseDialogs) {
+				game.closeOLCharacterChooseDialogs(event);
 			}
 			if (event.callback) {
 				event.callback(event.player, event.result);

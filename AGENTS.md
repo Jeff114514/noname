@@ -683,6 +683,7 @@ pm2 start ecosystem.config.cjs
 10. **联机自由选将**：联机选将结果须经 `game.initPlayerFromOLResult` 与 `game.setOLChoicePool` 配合校验；UI 与全将池逻辑见 `noname/game/connectFreeChoose.js`，勿在模式里复制一套 `ui.cheat2`。
 11. **内置事件内容在 `content.ts`**：手气卡（`replaceHandcards` / `replaceHandcardsOL`）、`gameStart` 清理、`chooseControl` 自由选将钩子等 Fork 改动均在此文件；合并上游后应用 `git diff` 或搜索 `getOLChangeCard`、`setupFreeChoose`、`roomConfigButton` 确认未丢失。
 12. **与上游合并**：存在 `upstream` 远程时定期 `git fetch upstream && git merge upstream/main`；若 GitHub 网页提示冲突而本地 merge 成功，以本地三方合并结果为准，合并后务必 `pnpm build` 并手测联机相关功能。
+13. **调试日志**：**禁止** ingest HTTP；用 `.cursor/debug.log` 或 `console.debug('[agent-debug]', …)`。改 `mode/*.js` 后执行 **`pnpm build`** 即可同步到 `dist`（勿手抄 `cp`）。详见 `docs/agent-debugging.md`。
 
 ---
 
@@ -691,6 +692,7 @@ pm2 start ecosystem.config.cjs
 | 文档 | 内容 |
 |------|------|
 | `docs/fork-features.md` | **Fork 定制**：联机自由选将、房间配置、`content.ts` 改动、上游合并 |
+| `docs/agent-debugging.md` | **Agent 调试**：禁止 ingest HTTP、文件日志、dist 同步、埋点清理 |
 | `docs/how-to-start.md` | 环境搭建与启动指南 |
 | `docs/game-startup-flow.md` | 游戏从启动到进行时的完整流程 |
 | `docs/game-event-flow.md` | GameEvent 事件系统详解（含 `content.ts` 内置事件表） |

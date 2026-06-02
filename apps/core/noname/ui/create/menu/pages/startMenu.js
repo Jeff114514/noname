@@ -397,6 +397,22 @@ export const startMenu = function (connectMenu) {
 			game.roomConfig.showDialog();
 		});
 		roomConfigButton.style.marginTop = "7px";
+
+		if (!lib.__roomConfigConnectMenuHook) {
+			lib.__roomConfigConnectMenuHook = true;
+			game.roomConfig.on("configApplied", function () {
+				if (!ui.connectMenuContainer || ui.connectMenuContainer.classList.contains("hidden")) {
+					return;
+				}
+				var active = start.querySelector(".active");
+				if (active && active.mode && typeof active._initLink === "function") {
+					active._initLink();
+				}
+				for (var i = 0; i < menuUpdates.length; i++) {
+					menuUpdates[i]();
+				}
+			});
+		}
 	}
 
 	return startButton;

@@ -1,6 +1,6 @@
 import { build } from "vite";
 import { join, dirname } from "path";
-import { existsSync, readdirSync } from "fs";
+import { copyFileSync, cpSync, existsSync, readdirSync, statSync } from "fs";
 import { Target, viteStaticCopy } from "vite-plugin-static-copy";
 import generateImportMap from "./vite-plugin-importmap";
 import jit from "@noname/jit";
@@ -115,6 +115,31 @@ async function main() {
 		}
 
 		await buildIndividual(type, target, input, importMap, copies);
+		// 非 Rollup 入口的 mode/card/character 文件（如 versus.js）每次从源码同步到 dist
+		syncStaticPackageFiles(type, input);
+	}
+}
+
+/**
+ * 将包体目录中未参与 Rollup 打包的顶层文件/目录同步到 dist（覆盖 vite 缓存导致的陈旧副本）。
+ */
+function syncStaticPackageFiles(type: string, input: Record<string, string>) {
+	const srcDir = join(root, type);
+	const destDir = join(root, "dist", type);
+	if (!existsSync(srcDir) || !existsSync(destDir)) {
+		return;
+	}
+	for (const file of readdirSync(srcDir)) {
+		if (getEntryName(file) in input) {
+			continue;
+		}
+		const src = join(srcDir, file);
+		const dest = join(destDir, file);
+		if (statSync(src).isDirectory()) {
+			cpSync(src, dest, { recursive: true });
+		} else {
+			copyFileSync(src, dest);
+		}
 	}
 }
 
@@ -176,6 +201,7 @@ async function buildIndividual(type: string, target: string | string[], input: R
 			sourcemap: false,
 			minify: false,
 			outDir: `dist/${type}`,
+			emptyOutDir: true,
 			rollupOptions: {
 				preserveEntrySignatures: "strict",
 				treeshake: true,

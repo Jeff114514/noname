@@ -219,6 +219,9 @@ export function setupFreeChoose(event, options = {}) {
 			if (this.dialog == evt.dialog) {
 				this.dialog.close();
 				evt.dialog = this.backup;
+				if (this.backup.videoId != null) {
+					this.backup.style.display = "";
+				}
 				this.backup.open();
 				delete this.backup;
 				game.uncheck();
@@ -229,7 +232,12 @@ export function setupFreeChoose(event, options = {}) {
 				}
 			} else {
 				this.backup = evt.dialog;
-				evt.dialog.close();
+				// 保留带 videoId 的联机选将 dialog，避免 get.idDialog 失效
+				if (evt.dialog.videoId != null) {
+					evt.dialog.style.display = "none";
+				} else {
+					evt.dialog.close();
+				}
 				evt.dialog = dialogxx;
 				this.dialog = evt.dialog;
 				evt.dialog.open();
@@ -247,7 +255,50 @@ export function setupFreeChoose(event, options = {}) {
 	ui.create.cheat2();
 }
 
-export function teardownFreeChoose() {
+/**
+ * 关闭联机选将相关 dialog（含自由选将隐藏的原 videoId dialog）
+ * @param {GameEvent} [event]
+ */
+export function closeOLCharacterChooseDialogs(event) {
+	const evt = event || _status.event;
+	if (ui.cheat2?.backup) {
+		const backup = ui.cheat2.backup;
+		if (backup.delay) {
+			clearInterval(backup.delay);
+			delete backup.delay;
+		}
+		if (typeof backup.close === "function") {
+			backup.close();
+		}
+		delete ui.cheat2.backup;
+	}
+	if (evt?.dialogxx) {
+		if (evt.dialogxx.delay) {
+			clearInterval(evt.dialogxx.delay);
+			delete evt.dialogxx.delay;
+		}
+		if (typeof evt.dialogxx.close === "function" && evt.dialog !== evt.dialogxx) {
+			evt.dialogxx.close();
+		}
+		delete evt.dialogxx;
+	}
+	if (game._characterDialogID != null) {
+		const olDialog = get.idDialog(game._characterDialogID);
+		if (olDialog && olDialog !== evt?.dialog) {
+			if (olDialog.delay) {
+				clearInterval(olDialog.delay);
+				delete olDialog.delay;
+			}
+			olDialog.close();
+		}
+	}
+}
+
+/**
+ * @param {GameEvent} [event]
+ */
+export function teardownFreeChoose(event) {
+	closeOLCharacterChooseDialogs(event);
 	if (ui.cheat2) {
 		ui.cheat2.close();
 		delete ui.cheat2;
@@ -300,5 +351,6 @@ export const connectFreeChoose = {
 	sanitizeOLCharacterResult,
 	setupFreeChoose,
 	teardownFreeChoose,
+	closeOLCharacterChooseDialogs,
 	initPlayerFromOLResult,
 };
