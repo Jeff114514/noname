@@ -317,7 +317,7 @@ export const optionsMenu = function (connectMenu) {
 				cfg._name = j;
 				if (j in config) {
 					cfg.init = config[j];
-				} else if (cfg.type != "autoskill" && cfg.type != "banskill") {
+				} else if (cfg.type != "autoskill" && cfg.type != "banskill" && cfg.init !== undefined) {
 					game.saveConfig(j, cfg.init);
 				}
 				if (!cfg.onclick) {

@@ -209,7 +209,7 @@ export const startMenu = function (connectMenu) {
 					cfg.mode = mode;
 					if (j in config) {
 						cfg.init = config[j];
-					} else {
+					} else if (cfg.init !== undefined) {
 						game.saveConfig(j, cfg.init, mode);
 					}
 					if (!cfg.onclick) {

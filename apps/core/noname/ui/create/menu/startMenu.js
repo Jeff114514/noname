@@ -122,7 +122,7 @@ export const startMenuData = {
 				value.mode = mode;
 				if (key in config) {
 					value.init = config[key];
-				} else {
+				} else if (value.init !== undefined) {
 					game.saveConfig(key, value.init, mode);
 				}
 				if (!value.onclick) {

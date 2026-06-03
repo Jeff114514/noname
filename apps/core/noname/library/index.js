@@ -7545,10 +7545,7 @@ export class Library {
 					name: "联机昵称",
 					input: true,
 					frequent: true,
-					onclick(item) {
-						game.saveConfig("connect_nickname", item);
-						game.saveConfig("connect_avatar", item, "connect");
-					},
+					init: "无名玩家",
 				},
 				connect_avatar: {
 					name: "联机头像",

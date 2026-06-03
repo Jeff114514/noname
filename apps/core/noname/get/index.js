@@ -844,7 +844,19 @@ export class Get {
 		return obj.filter(element => element == item).length;
 	}
 	connectNickname() {
-		return typeof lib.config.connect_nickname == "string" ? lib.config.connect_nickname.slice(0, 12) : "无名玩家";
+		let name = lib.config.connect_nickname;
+		if (typeof name !== "string") {
+			name = lib.config.mode_config?.connect?.connect_nickname;
+		}
+		if (typeof name !== "string" || !name.replace(/\s/g, "")) {
+			return "无名玩家";
+		}
+		name = name.replace(/<br>/g, "").trim().slice(0, 12);
+		// 历史 bug 曾把武将 id 误存为昵称
+		if (lib.character[name]) {
+			return "无名玩家";
+		}
+		return name;
 	}
 	/**
 	 * 返回智囊牌名组成的数组

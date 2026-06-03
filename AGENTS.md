@@ -26,6 +26,10 @@
 
 与上游同步推荐在本地执行 `git fetch upstream main && git merge upstream/main`；上游大版本曾将 `content.js` 重构为 `content.ts`（#3838），Git 会按重命名合并，一般不必手动搬运 diff。
 
+**工作区路径**：本 monorepo 根目录为 `noname/`（例如 `Jeff/nginx/noname`）。浏览器/PM2/Nginx 实际加载的静态根目录是 **`noname/dist/`**（由根目录 `scripts/build.ts` 合并 `apps/core/dist` 得到）。父目录可能另有 `noname.nginx.conf` 等反向代理配置，改游戏逻辑仍以 `noname/` 为准。
+
+**Fork 功能总览**（联机选将、房间配置、`content.ts` 钩子、部署）：优先读 [`docs/fork-features.md`](docs/fork-features.md)。
+
 ---
 
 ## 技术栈
@@ -302,8 +306,8 @@ pnpm dev
 pnpm build
 ```
 
-`scripts/build.ts` 的执行逻辑：
-1. `pnpm -F noname... build` —— 构建核心（含其 workspace 依赖）
+`scripts/build.ts`（仓库根）的执行逻辑：
+1. `pnpm -F noname... build` —— 构建 `apps/core`（见下）
 2. `pnpm -F ./packages/extension/** build` —— 构建所有扩展
 3. 清空并重建根目录 `dist/`，合并以下内容：
    - `apps/core/dist` → `dist/`
@@ -311,6 +315,12 @@ pnpm build
    - `apps/core/image` → `dist/image`
    - `apps/core/extension` → `dist/extension`
    - `docs/`、`.nomedia`、`LICENSE`、`README.md` → `dist/`
+
+`apps/core/scripts/build.ts`（`pnpm -F noname build`）额外要点：
+- **Rollup 入口**：`index.html`、`noname.js`；`character/*` 中 `moderned_characters` 列出的包单独打包。
+- **`mode/identity.js` 等**：多数模式为**非入口**文件，构建结束时由 `syncStaticPackageFiles("mode", …)` **从源码覆盖**到 `apps/core/dist/mode/`（目录会先 `rmSync` 再 `cpSync`，避免陈旧子文件）。
+- **`syncSourceMirror()`**：构建后将 `noname/` 源码整目录同步到 `dist/src/noname/`，避免 `viteStaticCopy` 留下旧版 `connectFreeChoose.js` 等。
+- **改 `mode/*.js`、`character/*/skill.js`、未现代化武将包**：改源码后必须在 **`noname` 根目录执行 `pnpm build`**，勿只改 `apps/core/dist` 或手抄 `cp`。
 
 > 核心构建使用 `preserveModules: true` 且文件名不含内容哈希，因为游戏通过固定路径动态加载模块。
 
@@ -571,6 +581,20 @@ while (true) {
 
 校验规则简述：自由选将开启时，提交的武将须在 `getOLCharacterPool()` 内（含 `characterReplace` 别名）；关闭时须在 `setOLChoicePool` 记录的随机候选内。修改新模式联机选将时，应同时处理上述记录与校验，否则客机可提交池外武将。
 
+**UI 与 `game.check`（联机 2v2 自由选将曾踩坑）：**
+
+- 刷新选将按钮高亮须 `game.uncheck("button")` 后 `game.check()`，**禁止** `game.check("button")`：后者会把字符串 `"button"` 当作 event，执行 `event._checked = true` 导致 `Cannot create property '_checked' on string 'button'`。
+- `connectFreeChoose.js` 中 `refreshFreeChooseDialogCheck`、`setupFreeChoose` 与 `content.ts` 里 `setupFreeChoose` 调用顺序：先挂载自由选将 UI，再 `resetFreeChooseSelection`，再 `game.check()`。
+- 对抗模式 `mode/versus.js` 联机自由选将：`chooseButton(true)` 需 `set("selectButton", [1, 2])`；主机用 `game.broadcast` 同步 `_status.characterlist`；切换 dialog 时清理 `_buttonChoice` 缓存。
+
+**联机 `game.broadcast` / `broadcastAll` 规范：**
+
+- 函数体**不能引用闭包变量**；参数须可经 `get.stringifiedResult` 序列化（见 `library/element/client.js`）。
+- **禁止**向 `broadcastAll` 传入完整 `GameEvent` 或含循环引用的对象；应传 `player`、牌名字符串、花色、类型等原始值（参考 `character/yijiang/skill.js` 的 `jianying_mark`）。
+- `game.broadcastAll` 在 **`game.online === true`（客机）时直接 return**，仅房主执行并下发；客机 UI 须依赖同步后的状态或 `addVideo`，勿假设本机执行了 broadcast 回调。
+- 使用 `game.getAllGlobalHistory("useCard")` 时，联机下 `history.indexOf(event)` 常失败；应回退到 `history.length - 1` / `at(-2)` 并校验 `evt?.card`，`logAudio`/`filter` 须防空（例：`character/mobile/skill.js` 书张芝 `mbshiju`）。
+- 联机沙盒 `broadcast` 中勿用裸标识符 **`top`**（会解析为 `window.top`）；牌堆顶用 `event.top` 传参或 `showCards` 的 `.set("top", cards)`。
+
 **Fork 定制功能**（房间配置、联机自由选将、`content.ts` 改动、部署）：详见 `docs/fork-features.md`。
 
 技能定义参考：`docs/lib-skill-format.md`
@@ -608,12 +632,12 @@ Step 转 Async 完整指南：`docs/step-to-async-guide.md`
 
 ### 部署脚本
 
-根目录 `deploy.sh` 用于自托管服务器一键部署：
+根目录 `deploy.sh` 用于自托管服务器一键部署（脚本目录即项目根，`cd` 后执行）：
 1. 检查 Node.js（>= 20）、pnpm、PM2 环境
 2. 执行 `pnpm install`
-3. 执行 `pnpm build`（若 `dist/` 已存在则跳过）
+3. **始终**执行 `pnpm build`（合并 `apps/core/dist` → `dist/`，同步 `mode/`、`noname/` 等）
 4. 构建 `@noname/fs` 和 `@noname/server`
-5. 通过 PM2 启动/重启服务
+5. 通过 PM2 启动/重启服务（`ecosystem.config.cjs`）
 
 ---
 
@@ -684,6 +708,34 @@ pm2 start ecosystem.config.cjs
 11. **内置事件内容在 `content.ts`**：手气卡（`replaceHandcards` / `replaceHandcardsOL`）、`gameStart` 清理、`chooseControl` 自由选将钩子等 Fork 改动均在此文件；合并上游后应用 `git diff` 或搜索 `getOLChangeCard`、`setupFreeChoose`、`roomConfigButton` 确认未丢失。
 12. **与上游合并**：存在 `upstream` 远程时定期 `git fetch upstream && git merge upstream/main`；若 GitHub 网页提示冲突而本地 merge 成功，以本地三方合并结果为准，合并后务必 `pnpm build` 并手测联机相关功能。
 13. **调试日志**：**禁止** ingest HTTP；用 `.cursor/debug.log` 或 `console.debug('[agent-debug]', …)`。改 `mode/*.js` 后执行 **`pnpm build`** 即可同步到 `dist`（勿手抄 `cp`）。详见 `docs/agent-debugging.md`。
+14. **身份局新手教程**：`mode/identity.js` 首次 `new_tutorial` 流程中，用户点「跳过向导」应回到 **启动 splash 模式选择**（清除 `directstart` 与 `show_splash_off` 后 `location.reload()`）；勿用 `game.reload()`（会写入 `show_splash_off`）或仅 `configMenu()`（易出现空界面）。完成教程仍走原开局流程。
+15. **联机昵称**：大厅昵称用 `get.connectNickname()`；勿在 `library/index.js` 给 `connect_nickname` 绑错 `onclick`。菜单保存昵称前比对是否有改动；`optionsMenu` / `startMenu` 等对 `init === undefined` 勿误 `saveConfig`。应用房间配置后调用 `game.roomConfig.refreshConnectNickname()`。
+16. **武将技能位置**：书张芝等为 `character/mobile/`（`mb_zhangzhi`、`mbshiju`）；旧张芝在 `character/sp/`（`zhangzhi`）。联机报错先确认是哪一个武将包。
+17. **Git 提交**：用户未明确要求时不要 `git commit` / `push`；合并上游后本地务必 `pnpm build` 并手测联机相关路径。
+
+---
+
+## 常见故障与排查（维护速查）
+
+| 现象 | 优先检查 |
+|------|----------|
+| 联机自由选将全灰 / 一点就报错 `_checked` on string | `connectFreeChoose.js` 是否 `game.check()` 而非 `game.check("button")`；`dist/noname/game/connectFreeChoose.js` 是否已 build |
+| 改 `versus.js` / `identity.js` 无效 | 根目录 `pnpm build`；对比 `dist/mode/*.js` 与 `apps/core/mode/*.js` |
+| 联机某武将每步弹错 | 技能内 `broadcastAll` 是否传了 Event；`getAllGlobalHistory` + `indexOf` 是否未防空 |
+| 保存配置后昵称变武将 id | `get.connectNickname()`、`roomConfig.js`、`library/index.js` 联机项 |
+| 跳过新手教程进人机或空界面 | `mode/identity.js` 跳过分支是否 reload splash（见上文 §14） |
+| 部署后仍是旧逻辑 | `deploy.sh` 是否跑完整 `pnpm build`；PM2 是否 restart；浏览器强刷 |
+
+**按任务改哪里：**
+
+| 任务 | 主要路径 |
+|------|----------|
+| 联机选将 / 校验 | `noname/game/connectFreeChoose.js`、`library/element/content.ts`（`chooseControl`）、各 `mode/*` 的 OL 选将 |
+| 房间配置 / 云端 | `noname/game/roomConfig.js`、`packages/server`、`library/index.js`（`roomConfigButton`） |
+| 手气卡 / 开局 | `content.ts`（`replaceHandcards*`、`gameStart`）、`game.getOLChangeCard()` |
+| 身份局流程 | `mode/identity.js` |
+| 武将技能 | `character/<包名>/skill.js`（现代化包可能为 `index.ts` 入口 + 子模块） |
+| 启动 / splash | `noname/init/index.ts`、`noname/init/onload/*-splash.ts` |
 
 ---
 
@@ -702,4 +754,7 @@ pm2 start ecosystem.config.cjs
 | `docs/skin-guide.md` | 皮肤制作指南 |
 | `docs/audio-guide.md` | 音频规范 |
 | `DEPLOYMENT.md` | 在线服务部署指南（含 Docker、Nginx、PM2、HTTPS） |
-| `deploy.sh` | Fork：一键部署脚本（依赖检查、build、PM2 启动） |
+| `deploy.sh` | Fork：一键部署脚本（依赖检查、**始终** build、PM2 启动） |
+| `apps/core/scripts/build.ts` | 核心构建：`syncSourceMirror`、`syncStaticPackageFiles` |
+| `scripts/build.ts` | 根构建：合并 `apps/core/dist` → `dist/` |
+| `ecosystem.config.cjs` | PM2：静态 8089、WebSocket 8082 |

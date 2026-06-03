@@ -323,15 +323,25 @@ export function createConfig(config, position) {
 			}
 		};
 		if (config.name == "联机昵称") {
-			input.innerHTML = config.init || "无名玩家";
+			input.innerHTML = get.connectNickname();
+			input.onfocus = function () {
+				this._nicknameBeforeEdit = get.connectNickname();
+			};
 			input.onblur = function () {
-				input.innerHTML = input.innerHTML.replace(/<br>/g, "");
-				if (!input.innerHTML || get.is.banWords(input.innerHTML)) {
-					input.innerHTML = "无名玩家";
+				let value = input.innerHTML.replace(/<br>/g, "").trim();
+				if (!value || get.is.banWords(value)) {
+					value = this._nicknameBeforeEdit || "无名玩家";
 				}
-				input.innerHTML = input.innerHTML.slice(0, 12);
-				game.saveConfig("connect_nickname", input.innerHTML);
-				game.saveConfig("connect_nickname", input.innerHTML, "connect");
+				value = value.slice(0, 12);
+				if (lib.character[value]) {
+					value = this._nicknameBeforeEdit || "无名玩家";
+				}
+				input.innerHTML = value;
+				if (value === this._nicknameBeforeEdit) {
+					return;
+				}
+				game.saveConfig("connect_nickname", value);
+				game.roomConfig?.refreshConnectNickname?.();
 			};
 		} else if (config.name == "联机头像") {
 			// 显示当前配置的武将名称（直接使用翻译，不额外添加前缀）

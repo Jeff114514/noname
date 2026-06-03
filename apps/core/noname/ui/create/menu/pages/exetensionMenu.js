@@ -131,7 +131,7 @@ export const extensionMenu = function (connectMenu) {
 			cfg._name = j;
 			if (j in lib.config) {
 				cfg.init = lib.config[j];
-			} else {
+			} else if (cfg.init !== undefined) {
 				game.saveConfig(j, cfg.init);
 			}
 

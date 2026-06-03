@@ -281,7 +281,31 @@ export const roomConfig = {
 			roomConfig.pushConfigOLToRoom();
 		}
 
+		roomConfig.refreshConnectNickname();
 		roomConfig._emit("configApplied", config);
+	},
+
+	/**
+	 * 应用房间配置后刷新大厅/等待界面上的本机昵称与头像（不修改 lib.config.connect_nickname）
+	 */
+	refreshConnectNickname() {
+		const nickname = get.connectNickname();
+		const avatar = lib.config.connect_avatar || "caocao";
+		if (game.me) {
+			game.me.nickname = nickname;
+			game.me.setNickname();
+		}
+		if (game.connectPlayers?.length && game.onlineID) {
+			for (const p of game.connectPlayers) {
+				if (p.playerid === game.onlineID) {
+					p.initOL(nickname, avatar);
+					break;
+				}
+			}
+		}
+		if (game.online || game.onlineroom) {
+			game.send("server", "changeAvatar", nickname, avatar);
+		}
 	},
 
 	/**

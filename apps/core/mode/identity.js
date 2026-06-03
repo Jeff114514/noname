@@ -96,9 +96,20 @@ export default () => {
 
 				const skip_tutorial = await promise;
 
-				if (!skip_tutorial) {
-					await tutorial();
+				if (skip_tutorial) {
+					clear();
+					ui.auto.show();
+					ui.arena.classList.remove("only_dialog");
+					// 回到模式选择（splash），勿用 game.reload()（会写入 show_splash_off 导致下次不显示 splash）
+					localStorage.removeItem(lib.configprefix + "directstart");
+					localStorage.removeItem("show_splash_off");
+					event.finish();
+					window.onbeforeunload = null;
+					window.location.reload();
+					return;
 				}
+
+				await tutorial();
 
 				clear();
 				ui.auto.show();

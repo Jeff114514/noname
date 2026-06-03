@@ -1,5 +1,48 @@
 import { lib, game, ui, get, ai, _status } from "noname";
 
+/** 书张芝【势举】：取上一张全局 useCard（联机下 indexOf 事件常失败，需回退到栈顶） */
+function getMbshijuPreviousUseCard(event) {
+	const history = game.getAllGlobalHistory("useCard");
+	if (history.length < 2) {
+		return null;
+	}
+	let index = history.indexOf(event);
+	if (index < 0) {
+		index = history.length - 1;
+	}
+	if (index <= 0) {
+		return null;
+	}
+	const prev = history[index - 1];
+	return prev?.card ? prev : null;
+}
+
+/** 更新势举标记与 tip；联机 broadcast 只可传可序列化参数 */
+function updateMbshijuRecord(player, useEvent, skill = "mbshiju_record") {
+	if (!useEvent?.card) {
+		return;
+	}
+	const card = useEvent.card;
+	const cardName = get.name(card);
+	if (!cardName) {
+		return;
+	}
+	const suit = get.suit(card);
+	const type2 = get.type2(card);
+	player.addTip(skill, `势举 ${get.translation(cardName)}${get.translation(suit)}`);
+	player.markSkill(skill);
+	game.broadcastAll(
+		(player, typeText) => {
+			const mark = player.marks.mbshiju_record;
+			if (mark) {
+				mark.firstChild.innerHTML = get.translation(typeText);
+			}
+		},
+		player,
+		type2
+	);
+}
+
 /** @type { importCharacterConfig["skill"] } */
 const skills = {
 	// 诸葛果
@@ -4246,34 +4289,31 @@ const skills = {
 			player: "useCardAfter",
 		},
 		filter(event, player) {
-			const history = game.getAllGlobalHistory("useCard"),
-				index = history.indexOf(event);
-			if (index <= 0) {
+			const prev = getMbshijuPreviousUseCard(event);
+			if (!prev || !event?.card) {
 				return false;
 			}
-			const evt = history[index - 1];
-			return get.type2(evt.card) == get.type2(event.card) || get.suit(evt.card) == get.suit(event.card);
+			return get.type2(prev.card) == get.type2(event.card) || get.suit(prev.card) == get.suit(event.card);
 		},
 		forced: true,
 		logAudio(event) {
-			const history = game.getAllGlobalHistory("useCard"),
-				index = history.indexOf(event);
-			const evt = history[index - 1];
-			const bool1 = get.type2(evt.card) == get.type2(event.card),
-				bool2 = get.suit(evt.card) == get.suit(event.card),
-				bool3 = get.name(evt.card) == get.name(event.card);
+			const prev = getMbshijuPreviousUseCard(event);
+			if (!prev || !event?.card) {
+				return 2;
+			}
+			const bool1 = get.type2(prev.card) == get.type2(event.card),
+				bool2 = get.suit(prev.card) == get.suit(event.card),
+				bool3 = get.name(prev.card) == get.name(event.card);
 			return bool1 && bool2 && bool3 ? "mbshiju3.mp3" : 2;
 		},
 		async content(event, trigger, player) {
-			const history = game.getAllGlobalHistory("useCard"),
-				index = history.indexOf(trigger);
-			if (index <= 0) {
+			const prev = getMbshijuPreviousUseCard(trigger);
+			if (!prev || !trigger?.card) {
 				return;
 			}
-			const evt = history[index - 1];
-			const bool1 = get.type2(evt.card) == get.type2(trigger.card),
-				bool2 = get.suit(evt.card) == get.suit(trigger.card),
-				bool3 = get.name(evt.card) == get.name(trigger.card);
+			const bool1 = get.type2(prev.card) == get.type2(trigger.card),
+				bool2 = get.suit(prev.card) == get.suit(trigger.card),
+				bool3 = get.name(prev.card) == get.name(trigger.card);
 			if (bool1) {
 				await player.gain(get.cards(1, true), "gain2", false);
 			}
@@ -4304,7 +4344,10 @@ const skills = {
 				if (typeof card == "object") {
 					const evts = game.getAllGlobalHistory("useCard");
 					if (evts.length) {
-						let evt = evts[evts.length - 1];
+						const evt = evts[evts.length - 1];
+						if (!evt?.card) {
+							return num;
+						}
 						const bool1 = get.type2(evt.card) == get.type2(card),
 							bool2 = get.suit(evt.card) == get.suit(card),
 							bool3 = get.name(evt.card) == get.name(card);
@@ -4331,14 +4374,14 @@ const skills = {
 				},
 				silent: true,
 				async content(event, trigger, player) {
-					get.info(event.name).init(player, event.name);
+					updateMbshijuRecord(player, trigger);
 				},
 				intro: {
 					markcount() {
 						const history = game.getAllGlobalHistory("useCard");
 						if (history.length) {
 							const evt = history.at(-1);
-							if (evt) {
+							if (evt?.card) {
 								return get.translation(get.suit(evt.card));
 							}
 						}
@@ -4348,9 +4391,9 @@ const skills = {
 						const history = game.getAllGlobalHistory("useCard");
 						if (history.length) {
 							const evt = history.at(-1);
-							if (evt) {
+							if (evt?.card) {
 								return `
-									上一张被使用的牌：${get.translation(evt.card.name)}<br>
+									上一张被使用的牌：${get.translation(get.name(evt.card))}<br>
 									花色：${get.translation(get.suit(evt.card))}<br>
 									类型：${get.translation(get.type2(evt.card))}
 								`;
@@ -4361,23 +4404,9 @@ const skills = {
 				},
 				init(player, skill) {
 					const history = game.getAllGlobalHistory("useCard");
-					if (history.length) {
-						const evt = history.at(-1);
-						if (!evt) {
-							return;
-						}
-						player.addTip(skill, `势举 ${get.translation(evt.card.name)}${get.translation(get.suit(evt.card))}`);
-						player.markSkill(skill);
-						game.broadcastAll(
-							(evt, player) => {
-								const mark = player.marks.mbshiju_record;
-								if (mark) {
-									mark.firstChild.innerHTML = get.translation(get.type2(evt.card));
-								}
-							},
-							evt,
-							player
-						);
+					const evt = history.at(-1);
+					if (evt) {
+						updateMbshijuRecord(player, evt, skill);
 					}
 				},
 				onremove(player, skill) {
