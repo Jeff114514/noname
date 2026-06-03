@@ -20256,43 +20256,47 @@ const skills = {
 		audio: 2,
 		enable: "phaseUse",
 		usable: 1,
-		content() {
-			"step 0";
-			player.chooseToPlayBeatmap(lib.skill.chongxu.beatmaps.randomGet());
-			"step 1";
-			var score = Math.floor(Math.min(5, result.accuracy / 17));
+		async content(event, trigger, player) {
+			const chooseEvent = player.chooseToPlayBeatmap(lib.skill.chongxu.beatmaps.randomGet());
+			const result = await chooseEvent.forResult();
+			if (!result || typeof result.accuracy !== "number") {
+				return;
+			}
+			const score = Math.floor(Math.min(5, result.accuracy / 17));
 			event.score = score;
 			game.log(player, "的演奏评级为", "#y" + result.rank[0], "，获得积分点数", "#y" + score, "分");
 			if (score < 3) {
 				if (score >= 2) {
-					player.draw();
+					await player.draw();
 				}
-				event.finish();
 				return;
 			}
-			var list = [];
+			const list = [];
 			if (player.countMark("miaojian") < 2 && player.hasSkill("miaojian")) {
 				list.push("修改【妙剑】");
 			}
 			if (player.countMark("shhlianhua") < 2 && player.hasSkill("shhlianhua")) {
 				list.push("修改【莲华】");
 			}
+			let controlResult;
 			if (list.length) {
 				list.push("全部摸牌");
-				player.chooseControl(list).set("prompt", "冲虚：修改技能" + (score == 5 ? "并摸一张牌" : "") + "；或摸" + Math.floor(score / 2) + "张牌");
+				controlResult = await player
+					.chooseControl(list)
+					.set("prompt", "冲虚：修改技能" + (score == 5 ? "并摸一张牌" : "") + "；或摸" + Math.floor(score / 2) + "张牌")
+					.forResult();
 			} else {
-				event._result = { control: "全部摸牌" };
+				controlResult = { control: "全部摸牌" };
 			}
-			"step 2";
-			var score = event.score;
-			if (result.control != "全部摸牌") {
-				score -= 3;
-				var skill = result.control == "修改【妙剑】" ? "miaojian" : "shhlianhua";
+			let remainScore = event.score;
+			if (controlResult.control != "全部摸牌") {
+				remainScore -= 3;
+				const skill = controlResult.control == "修改【妙剑】" ? "miaojian" : "shhlianhua";
 				player.addMark(skill, 1, false);
 				game.log(player, "修改了技能", "#g【" + get.translation(skill) + "】");
 			}
-			if (score > 1) {
-				player.draw(Math.floor(score / 2));
+			if (remainScore > 1) {
+				await player.draw(Math.floor(remainScore / 2));
 			}
 		},
 		ai: {

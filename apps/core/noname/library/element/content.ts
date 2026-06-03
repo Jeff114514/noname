@@ -1447,17 +1447,23 @@ export const Content: Record<string, ContentFuncByAll | ContentFuncsByAll> = {
 
 	// 苏婆！
 	async chooseToPlayBeatmap(event, trigger, player) {
-		if (game.online) {
-			return;
-		}
+		const getBeatmapBroadcastData = beatmap => ({
+			name: beatmap.name,
+			filename: beatmap.filename,
+			timeleap: beatmap.timeleap,
+			current: beatmap.current ?? 0,
+			speed: beatmap.speed ?? 25,
+		});
 		if (_status.connectMode) {
 			event.time = lib.configOL.choose_timeout;
 		}
 		event.videoId = lib.status.videoId++;
+		const beatmap = event.beatmap;
+		const beatmapView = getBeatmapBroadcastData(beatmap);
 		//给其他角色看的演奏框
 		game.broadcastAll(
 			(player, id, beatmap) => {
-				if (_status.connectMode) {
+				if (_status.connectMode && beatmap.timeleap?.length) {
 					lib.configOL.choose_timeout = (Math.ceil((beatmap.timeleap[beatmap.timeleap.length - 1] + beatmap.speed * 100 + (beatmap.current || 0)) / 1000) + 5).toString();
 				}
 				if (player == game.me) {
@@ -1481,10 +1487,8 @@ export const Content: Record<string, ContentFuncByAll | ContentFuncsByAll> = {
 			},
 			player,
 			event.videoId,
-			event.beatmap
+			beatmapView
 		);
-
-		const beatmap = event.beatmap;
 		let result: Partial<Result>;
 		if (event.isMine()) {
 			// 摆了，有空再修
@@ -1516,7 +1520,7 @@ export const Content: Record<string, ContentFuncByAll | ContentFuncsByAll> = {
 			let abs = 1;
 			let node_pos = 0;
 			if (custom_mapping) {
-				node_pos = mapping.shift();
+				node_pos = mapping.length ? mapping.shift() : 0;
 			} else if (mapping == "random") {
 				abs = get.rand(number_of_tracks);
 				node_pos = abs;
@@ -1552,8 +1556,9 @@ export const Content: Record<string, ContentFuncByAll | ContentFuncsByAll> = {
 					return;
 				}
 				event.settleed = true;
+				document.removeEventListener(clickType, click);
 				//评分
-				const acc = Math.floor((score / (added * 5)) * 100);
+				const acc = added > 0 ? Math.floor((score / (added * 5)) * 100) : 0;
 				if (!Array.isArray(lib.config.choose_to_play_beatmap_accuracies)) {
 					lib.config.choose_to_play_beatmap_accuracies = [];
 				}
@@ -1645,7 +1650,7 @@ export const Content: Record<string, ContentFuncByAll | ContentFuncsByAll> = {
 				}, speed * 110);
 
 				if (custom_mapping) {
-					node_pos = mapping.shift();
+					node_pos = mapping.length ? mapping.shift() : 0;
 				} else if (mapping == "random") {
 					while (node_pos == abs) {
 						node_pos = get.rand(number_of_tracks);
@@ -1719,7 +1724,8 @@ export const Content: Record<string, ContentFuncByAll | ContentFuncsByAll> = {
 					break;
 				}
 			};
-			document.addEventListener(lib.config.touchscreen ? "touchstart" : "mousedown", click);
+			const clickType = lib.config.touchscreen ? "touchstart" : "mousedown";
+			document.addEventListener(clickType, click);
 
 			game.countChoose();
 			setTimeout(
@@ -1742,9 +1748,44 @@ export const Content: Record<string, ContentFuncByAll | ContentFuncsByAll> = {
 			result = await promise;
 		} else if (event.isOnline()) {
 			result = await event.sendAsync();
+			if (!result || typeof result.accuracy !== "number") {
+				result = await simulateBeatmapResult(beatmap);
+			}
 		} else {
 			game.countChoose();
+			result = await simulateBeatmapResult(beatmap);
+		}
 
+		if (!result || typeof result.accuracy !== "number") {
+			result = {
+				bool: true,
+				accuracy: 0,
+				rank: ["D", "fire"],
+			};
+		}
+
+		game.broadcastAll(
+			(id, time) => {
+				if (_status.connectMode) {
+					lib.configOL.choose_timeout = time;
+				}
+				const dialog = get.idDialog(id);
+				if (dialog) {
+					dialog.close();
+				}
+				if (ui.backgroundMusic && !isNaN(ui.backgroundMusic.duration)) {
+					ui.backgroundMusic.play();
+				}
+			},
+			event.videoId,
+			event.time
+		);
+
+		event.result = result;
+
+		return;
+
+		async function simulateBeatmapResult(beatmap) {
 			const songDuration = beatmap.timeleap[beatmap.timeleap.length - 1] + beatmap.speed * 100 + 1000 + (beatmap.current || 0);
 			const control = new AbortController();
 			const songPlaybackDelay = delayExt(songDuration, { signal: control.signal, rejectOnAbort: false });
@@ -1804,33 +1845,12 @@ export const Content: Record<string, ContentFuncByAll | ContentFuncsByAll> = {
 				event.control.close();
 			}
 
-			result = {
+			return {
 				bool: true,
 				accuracy: acc,
 				rank: rank,
 			};
 		}
-
-		game.broadcastAll(
-			(id, time) => {
-				if (_status.connectMode) {
-					lib.configOL.choose_timeout = time;
-				}
-				const dialog = get.idDialog(id);
-				if (dialog) {
-					dialog.close();
-				}
-				if (ui.backgroundMusic && !isNaN(ui.backgroundMusic.duration)) {
-					ui.backgroundMusic.play();
-				}
-			},
-			event.videoId,
-			event.time
-		);
-
-		event.result = result;
-
-		return;
 
 		/**
 		 * 暂停x毫秒
