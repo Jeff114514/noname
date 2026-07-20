@@ -6,12 +6,12 @@ const characterSort = {
 	tw_yunchouren: ["tw_liuzhang", "tw_xujing", "tw_qiaogong"],
 	tw_yunchouyong: ["tw_zongyu", "tw_chendong", "tw_sunyi"],
 	tw_yunchouyan: ["tw_jiangqing", "tw_huangfusong"],
-	tw_sbcharacter: ["tw_sb_sp_zhugeliang", "tw_sb_caopi"],
+	tw_sbcharacter: ["tw_sb_sp_zhugeliang", "tw_sb_caopi", "tw_sb_xiahoudun"],
 	tw_swordsman: ["xia_yuzhenzi", "xia_shie", "xia_shitao", "xia_guanyu", "xia_liubei", "xia_xiahousone", "xia_xiahoudun", "xia_zhangwei", "xia_xushu", "xia_wangyue", "xia_liyàn", "xia_tongyuan", "xia_lusu", "xia_dianwei", "xia_zhaoe", "xia_xiahouzie"],
-	tw_beiding: ["huan_luxun", "huan_liushan", "huan_zhugeliang", "huan_jiangwei", "huan_zhanghe", "huan_zhugeguo", "huan_weiyan", "huan_simayi", "huan_zhaoyun"],
+	tw_beiding: ["huan_luxun", "huan_liushan", "huan_zhugeliang", "huan_jiangwei", "huan_zhanghe", "huan_zhugeguo", "huan_weiyan", "huan_simayi", "huan_zhaoyun", "huan_daqiao"],
 	tw_weiang: ["huan_liufeng", "huan_caoang", "huan_huanggai", "huan_dingshangwan", "huan_dianwei", "huan_caopi", "huan_caozhi", "huan_caochong"],
 	tw_jsrg: ["tw_jsrg_wangyun", "tw_jsrg_hejin", "tw_jsrg_caocao", "tw_jsrg_huangfusong", "tw_jsrg_sunjian", "tw_jsrg_liubei"],
-	tw_mobile: ["nashime", "tw_gexuan", "tw_zhugeguo", "tw_yj_zhanghe"],
+	tw_mobile: ["nashime", "tw_gexuan", "tw_zhugeguo", "tw_yj_zhanghe", "tw_yj_fazheng"],
 	tw_standard: ["tw_zhangfei"],
 	tw_shenhua_yin: ["tw_yl_luzhi"],
 	tw_shenhua_lei: ["tw_guanqiujian"],
@@ -23,6 +23,7 @@ const characterSort = {
 	tw_yijiang7: ["tw_xuezong"],
 	tw_yijiang: ["tw_caoang", "tw_caohong", "tw_zumao", "tw_dingfeng", "tw_maliang", "tw_xiahouba"],
 	tw_english: ["kaisa"],
+	tw_sxrm: ["tw_sxrm_huatuo", "tw_sxrm_liubei", "tw_sxrm_caocao", "tw_sxrm_fuhuanghou"],
 	tw_waitingforsort: [],
 };
 
@@ -51,7 +52,8 @@ const characterSortTranslate = {
 	tw_yijiang: "一将成名TW",
 	tw_english: "英文版",
 	tw_waitingforsort: "等待分包",
-	extra_tw: "神将异构·海外服"
+	extra_tw: "神将异构·海外服",
+	tw_sxrm: "海外服·蚀心入魔",
 };
 
 export { characterSort, characterSortTranslate };

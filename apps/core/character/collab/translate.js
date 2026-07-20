@@ -1,10 +1,16 @@
 import { lib, game, ui, get, ai, _status } from "noname";
 
 const translates = {
+	ol_le_caopi: "OL乐曹丕",
+	ol_le_caopi_prefix: "OL乐",
+	olweidai: "魏代",
+	olweidai_info: "锁定技，当魏势力角色对你使用牌后，你加1点体力上限，然后若你的体力上限为全场最大，你将体力上限调整至体力值并摸减少体力上限张牌；若摸牌数大于等于存活角色数，你令一名角色变更势力为魏。",
+	olliangzi: "梁姿",
+	olliangzi_info: "锁定技，你的装备牌只能当【酒】使用。你每回合使用前X张【酒】无次数限制（X为魏势力角色数）。",
 	bachiqionggouyu: "八尺琼勾玉",
-	bachiqionggouyu_info: "锁定技，出牌阶段结束时回复1点体力;摸牌阶段开始时，若你的体力为满，则摸牌数+2。",
+	bachiqionggouyu_info: "锁定技，出牌阶段结束时回复1点体力；摸牌阶段开始时，若你的体力为满，则摸牌数+2。",
 	bachiqionggouyu_skill: "八尺琼勾玉",
-	bachiqionggouyu_skill_info: "锁定技，出牌阶段结束时回复1点体力;摸牌阶段开始时，若你的体力为满，则摸牌数+2。",
+	bachiqionggouyu_skill_info: "锁定技，出牌阶段结束时回复1点体力；摸牌阶段开始时，若你的体力为满，则摸牌数+2。",
 	bazhijing: "八咫鏡",
 	bazhijing_info: "锁定技，在你受到一张锦囊牌伤害后，防止同名锦囊牌对你造成的伤害，失去此装备后清除记录。",
 	bazhijing_skill: "八咫鏡",
@@ -173,7 +179,7 @@ const translates = {
 	lieshen_info: "限定技，出牌阶段，你可以令一名角色将体力值和手牌数调整至游戏开始时。",
 	shengongbao: "申公豹",
 	zhuzhou: "助纣",
-	zhuzhou_info: "每回合限一次，手牌数最多的角色造成伤害后，你可以令其获得受伤角色的的一张手牌。",
+	zhuzhou_info: "每回合限一次，手牌数最多的角色造成伤害后，你可以令其获得受伤角色的一张手牌。",
 	yaoxian: "邀仙",
 	yaoxian_info: "出牌阶段限一次，你可以令一名角色摸两张牌，然后其须对你指定的另一名其他角色使用【杀】，否则其失去1点体力。",
 	nanjixianweng: "南极仙翁",

@@ -2,13 +2,120 @@ import { lib, game, ui, get, ai, _status } from "noname";
 
 /** @type { importCharacterConfig["skill"] } */
 const skills = {
+	//乐曹丕------by 清风
+	olweidai: {
+		audio: 2,
+		forced: true,
+		trigger: { global: "useCardAfter" },
+		filter(event, player) {
+			return event.player.group == "wei" && event.targets?.includes(player);
+		},
+		async content(event, trigger, player) {
+			await player.gainMaxHp();
+			if (player.isMaxMaxHp()) {
+				const num = player.maxHp - player.getHp();
+				if (num > 0) {
+					await player.loseMaxHp(num);
+					await player.draw({ num });
+					if (num >= game.players.length && game.hasPlayer(current => current.group !== "wei")) {
+						const result = await player
+							.chooseTarget({
+								prompt: "魏代：将一名角色的势力变更为魏",
+								forced: true,
+								filterTarget(card, player, target) {
+									return target.group !== "wei";
+								},
+								ai(target) {
+									return 1 + Math.random();
+								},
+							})
+							.forResult();
+						if (result?.bool && result.targets?.length) {
+							const target = result.targets[0];
+							player.line(target);
+							await target.changeGroup("wei");
+						}
+					}
+				}
+			}
+		},
+	},
+	olliangzi: {
+		audio: 2,
+		forced: true,
+		mod: {
+			cardEnabled(card, player) {
+				if (get.name(card) === "jiu") {
+					return;
+				}
+				const hs = player.getCards("he", card => get.type(card) == "equip");
+				if (get.type(card) == "equip" && "cards" in card && Array.isArray(card.cards) && card.cards.containsSome(...hs)) {
+					return false;
+				}
+			},
+			cardSavable(card, player) {
+				if (get.name(card) === "jiu") {
+					return;
+				}
+				const hs = player.getCards("he", card => get.type(card) == "equip");
+				if (get.type(card) == "equip" && "cards" in card && Array.isArray(card.cards) && card.cards.containsSome(...hs)) {
+					return false;
+				}
+			},
+		},
+		enable: "chooseToUse",
+		filterCard(card) {
+			return get.type(card) == "equip";
+		},
+		viewAsFilter(player) {
+			return player.countCards("he", card => get.type(card) == "equip") > 0;
+		},
+		viewAs: {
+			name: "jiu",
+		},
+		position: "he",
+		prompt: "将一张装备牌当做【酒】使用",
+		check(card) {
+			return 114514 - get.value(card);
+		},
+		ai: {
+			order: 8,
+			result: {
+				player: 1,
+			},
+		},
+		group: "olliangzi_use",
+		subSkill: {
+			use: {
+				forced: true,
+				audio: "olliangzi",
+				trigger: { player: "useCard" },
+				filter(event, player) {
+					if (get.name(event.card) !== "jiu") {
+						return false;
+					}
+					const index = player.getHistory("useCard", evt => get.name(evt.card) == "jiu").indexOf(event);
+					const num = game.countPlayer(current => current.group === "wei");
+					return index < num && event.addCount !== false;
+				},
+				async content(event, trigger, player) {
+					trigger.addCount = false;
+					const stat = trigger.player.getStat("card"),
+						name = trigger.card.name;
+					if (typeof stat[name] == "number" && stat[name] > 0) {
+						stat[name]--;
+					}
+				},
+			},
+		},
+	},
 	// 魔周瑜
 	yiran: {
 		audio: 2,
 		trigger: { player: "damageBegin3" },
 		forced: true,
 		filter(event, player) {
-			return  event.hasNature("fire");
+			return event.hasNature("fire");
 		},
 		async content(event, trigger, player) {
 			trigger.num++;
@@ -960,7 +1067,7 @@ const skills = {
 	dcweiqu: {
 		audio: 2,
 		trigger: {
-			target: "useCardToTargeted",
+			target: "useCardToTarget",
 		},
 		filter(event, player) {
 			return event.targets.length == 1 && event.cards.length > 0 && player.countCards("he") > 0;
@@ -1135,6 +1242,10 @@ const skills = {
 				return false;
 			}
 			return true;
+		},
+		check(event, player) {
+			const hs = player.getCards("h");
+			return hs.length < 3 && hs.every(card => !player.hasUseTarget(card));
 		},
 		async content(event, trigger, player) {
 			let card = get.cardPile(card => get.type(card) == "equip" && player.hasUseTarget(card));
@@ -1350,7 +1461,7 @@ const skills = {
 		async content(event, trigger, player) {
 			const skill = event.name;
 			player.addMark(skill, 1, false);
-			player.when({ global: ["roundStart"] }).then(() => player.clearMark("mbzhengpeng", false));
+			player.when({ global: ["roundStart"] }).step(async () => player.clearMark("mbzhengpeng", false));
 			await player.loseHp(player.countMark(skill) - 1);
 			const num = get.info(skill).judge(event.targets[0]);
 			if (num > 0) {
@@ -6263,6 +6374,7 @@ const skills = {
 			global: "phaseBefore",
 			player: ["enterGame", "useCardAfter", "respondAfter"],
 		},
+		keepSkill: true,
 		filter(event, player) {
 			if (["useCard", "respond"].includes(event.name)) {
 				if (get.type(event.card) != "basic") {
@@ -8298,7 +8410,7 @@ const skills = {
 				player(player) {
 					let num1 = 0,
 						num2 = 0;
-					game.countPlayer(function (current) {
+					game.countPlayer(current => {
 						if (player == current) {
 							return;
 						}
@@ -8421,7 +8533,7 @@ const skills = {
 				async content(event, trigger, player) {
 					const result = await player
 						.chooseTarget("请选择【暴雨】的目标", "令目标角色弃置所有手牌。若其没有手牌，则其改为失去1点体力。")
-						.set("ai", target => {
+						.set("ai", current => {
 							const es = current.getCards("h"),
 								player = get.player();
 							if (es.length > 0) {
