@@ -30,7 +30,7 @@ module.exports = {
 		},
 		{
 			name: "noname-websocket",
-			script: path.join(root, "packages/server/dist/index.cjs"),
+			script: path.join(root, "packages/server/dist/cli.cjs"),
 			cwd: root,
 			instances: 1,
 			autorestart: true,

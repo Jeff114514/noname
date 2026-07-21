@@ -71,7 +71,7 @@ export function createServer(options: ServerOptions = {}): ServerInstance {
 	const bannedKeyWords: string[] = [];
 
 	// ========= 配置存储（Fork: 房间配置云端同步） =========
-	const configDir = path.join(__dirname, "configs");
+	const configDir = options.configDir ?? path.join(process.cwd(), "dist", "configs");
 	const configPath = path.join(configDir, "shared.json");
 	const MAX_CONFIGS = 50;
 

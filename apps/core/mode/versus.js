@@ -3823,7 +3823,7 @@ export default () => {
 								}
 								event.sendback(
 									{
-										result: bool,
+										bool: true,
 										links: [choice],
 									},
 									target
@@ -3866,7 +3866,21 @@ export default () => {
 						}
 						_status.characterlist.remove(result[i]);
 						if (!lib.playerOL[i].name1) {
-							lib.playerOL[i].init(result[i]);
+							const ok = game.initPlayerFromOLResult(
+								lib.playerOL[i],
+								{ links: [result[i]] },
+								{
+									allowedRandom: game._characterChoice[i],
+									initArgs: links => [links[0], null, null, false],
+								}
+							);
+							if (!ok) {
+								const fallback = game._characterChoice[i].randomGet();
+								result[i] = fallback;
+								lib.playerOL[i].init(fallback, null, null, false);
+							} else {
+								result[i] = lib.playerOL[i].name1;
+							}
 						}
 						lib.playerOL[i].update();
 					}

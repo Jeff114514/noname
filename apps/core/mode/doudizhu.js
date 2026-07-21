@@ -1159,7 +1159,7 @@ export default () => {
 						if (!ui.cheat && get.config("change_choice")) {
 							ui.create.cheat();
 						}
-						if (!ui.cheat2 && get.config("free_choose")) {
+						if (!ui.cheat2 && game.isFreeChooseEnabled()) {
 							ui.create.cheat2();
 						}
 					}
@@ -1328,7 +1328,7 @@ export default () => {
 						if (game.online || player == game.me) {
 							game.initPlayerFromOLResult(player, result);
 						}
-					});
+					}).set("onfree", true);
 					"step 2";
 					for (var i in lib.playerOL) {
 						if (!result[i] || result[i] == "ai" || !result[i].links || !result[i].links.length) {
@@ -1475,11 +1475,13 @@ export default () => {
 						game.setOLChoicePool(game.players[i].playerid, event.map[game.players[i].playerid]);
 						list.push([game.players[i], [str, [event.map[game.players[i].playerid], "character"]], true]);
 					}
-					game.me.chooseButtonOL(list, function (player, result) {
-						if (game.online || player == game.me) {
-							game.initPlayerFromOLResult(player, result);
-						}
-					});
+					game.me
+						.chooseButtonOL(list, function (player, result) {
+							if (game.online || player == game.me) {
+								game.initPlayerFromOLResult(player, result);
+							}
+						})
+						.set("onfree", true);
 					"step 4";
 					for (var i in result) {
 						if (result[i] && result[i].links) {
@@ -1667,11 +1669,13 @@ export default () => {
 							},
 						]);
 					}
-					game.me.chooseButtonOL(list, function (player, result) {
-						if (game.online || player == game.me) {
-							game.initPlayerFromOLResult(player, result);
-						}
-					});
+					game.me
+						.chooseButtonOL(list, function (player, result) {
+							if (game.online || player == game.me) {
+								game.initPlayerFromOLResult(player, result);
+							}
+						})
+						.set("onfree", true);
 					"step 4";
 					for (var i in lib.playerOL) {
 						if (!result[i] || result[i] == "ai" || !result[i].links || !result[i].links.length) {
@@ -1847,11 +1851,13 @@ export default () => {
 						game.setOLChoicePool(game.players[i].playerid, event.map[game.players[i].playerid]);
 						list.push([game.players[i], ["选择" + (game.players[i] == game.zhu ? "两" : "一") + "张武将牌", [event.map[game.players[i].playerid], "character"]], true, game.players[i] == game.zhu ? 2 : 1]);
 					}
-					game.me.chooseButtonOL(list, function (player, result) {
-						if (game.online || player == game.me) {
-							game.initPlayerFromOLResult(player, result);
-						}
-					});
+					game.me
+						.chooseButtonOL(list, function (player, result) {
+							if (game.online || player == game.me) {
+								game.initPlayerFromOLResult(player, result);
+							}
+						})
+						.set("onfree", true);
 					"step 4";
 					for (var i in result) {
 						if (result[i] == "ai") {
@@ -1983,11 +1989,13 @@ export default () => {
 						game.setOLChoicePool(game.players[i].playerid, sublist);
 						list.push([game.players[i], [str, [sublist, "characterx"]], selectButton, true]);
 					}
-					game.me.chooseButtonOL(list, function (player, result) {
-						if (game.online || player == game.me) {
-							game.initPlayerFromOLResult(player, result);
-						}
-					});
+					game.me
+						.chooseButtonOL(list, function (player, result) {
+							if (game.online || player == game.me) {
+								game.initPlayerFromOLResult(player, result);
+							}
+						})
+						.set("onfree", true);
 					"step 2";
 					for (var i in result) {
 						if (result[i] && result[i].links) {

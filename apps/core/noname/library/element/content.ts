@@ -4541,6 +4541,10 @@ export const Content: Record<string, ContentFuncByAll | ContentFuncsByAll> = {
 		}
 	},
 	async replaceHandcardsOL(event, trigger, player) {
+		if (!event.changeCard || event.changeCard === "disabled") {
+			return;
+		}
+
 		const chooseRemote = () => {
 			game.me.chooseBool({ prompt: "是否置换手牌？" });
 			game.resume();
@@ -4566,13 +4570,7 @@ export const Content: Record<string, ContentFuncByAll | ContentFuncsByAll> = {
 			});
 		};
 
-		const events = event.players.map(async current => {
-			const result = await choose(current);
-
-			if (!result) {
-				return;
-			}
-
+		const replaceOne = (current: Player) => {
 			/*otherPile主要是针对那些用专属牌堆，不从一般牌堆摸牌的角色（如陈寿），该属性目前只有两个键值对，且都为函数
 			 *getCards函数与获得牌相关，只传入要获得的牌数num作为参数
 			 *discard与手气卡换牌后弃置牌相关，只传入要弃置的牌card作为参数
@@ -4581,7 +4579,7 @@ export const Content: Record<string, ContentFuncByAll | ContentFuncsByAll> = {
 			const cards: Card[] = [];
 			const otherGetCards = event.otherPile?.[current.playerid]?.getCards;
 			const otherDiscard = event.otherPile?.[current.playerid]?.discard;
-			//先弃牌
+			//先弃牌（须 broadcastAll，客机才能同步弃牌状态）
 			game.broadcastAll(
 				(player, hs, otherDiscard) => {
 					game.addVideo("lose", player, [get.cardsInfo(hs), [], [], []]);
@@ -4621,77 +4619,16 @@ export const Content: Record<string, ContentFuncByAll | ContentFuncsByAll> = {
 			} else {
 				current.directgain(cards);
 			}
-			current._start_cards = cards;
-		});
-		await Promise.allSettled(events);
-
-		// Fork: 多轮换牌（手气卡 changeCard 功能）
-		const send = () => {
-			game.me.chooseBool("是否置换手牌？");
-			game.resume();
-		};
-
-		const sendback = (result, player) => {
-			if (!result || !result.bool) {
-				return;
-			}
-
-			const hs = player.getCards("h");
-			const cards = [];
-			const otherGetCards = event.otherPile?.[player.playerid]?.getCards;
-			const otherDiscard = event.otherPile?.[player.playerid]?.discard;
-			//先弃牌
-			game.broadcastAll(
-				(player, hs, otherDiscard) => {
-					game.addVideo("lose", player, [get.cardsInfo(hs), [], [], []]);
-					for (const card of hs) {
-						card.removeGaintag(true);
-						if (otherDiscard) {
-							otherDiscard(card);
-						} else {
-							card.discard(false);
-						}
-					}
-				},
-				player,
-				hs,
-				otherDiscard
-			);
-			//再摸牌，先看有没有专属牌堆
-			if (otherGetCards) {
-				cards.addArray(otherGetCards(hs.length));
-			} else {
-				cards.addArray(get.cards(hs.length));
-			}
-			//添加标记相关
-			if (event.gaintag?.[player.playerid]) {
-				const gaintag = event.gaintag[player.playerid];
-				const list = typeof gaintag == "function" ? gaintag(hs.length, cards) : [[cards, gaintag]];
-				game.broadcastAll(
-					(player, list) => {
-						for (let i = list.length - 1; i >= 0; i--) {
-							player.directgain(list[i][0], null, list[i][1]);
-						}
-					},
-					player,
-					list
-				);
-			} else {
-				player.directgain(cards);
-			}
-			player._start_cards = cards;
+			current._start_cards = current.getCards("h");
 		};
 
 		event.activePlayers = event.players.slice();
 
 		while (true) {
-			delete event.resultOL;
-
 			if (!event.activePlayers.length) {
 				break;
 			}
 
-			// 先检查当前状态，如果已经是"disabled"则直接退出
 			if (event.changeCard == "disabled") {
 				break;
 			}
@@ -4705,40 +4642,24 @@ export const Content: Record<string, ContentFuncByAll | ContentFuncsByAll> = {
 				// 无限次使用，不改变状态
 			}
 
-			let withol = false;
+			// 阶段一：并行询问所有活跃玩家
+			const decisions = await Promise.all(
+				event.activePlayers.map(async current => {
+					try {
+						return (await choose(current)) ? current : null;
+					} catch {
+						return null;
+					}
+				})
+			);
+			const accepted = decisions.filter((current): current is Player => !!current);
 
-			// 第一阶段：向远程在线玩家发送请求（本地 game.me 在第二阶段处理，避免重复 chooseBool）
-			for (const current of event.activePlayers) {
-				if (current.isOnline() && current != game.me) {
-					withol = true;
-					current.send(send);
-					current.wait(sendback);
-				}
+			// 阶段二：串行换牌，保证牌堆顺序稳定
+			for (const current of accepted) {
+				replaceOne(current);
 			}
 
-			// 第二阶段：处理本地玩家
-			for (const current of event.activePlayers) {
-				if (current == game.me) {
-					const next = game.me.chooseBool("是否置换手牌？");
-					game.me.wait(sendback);
-					const result = await next.forResult();
-					game.me.unwait(result);
-				}
-			}
-
-			if (withol && !event.resultOL) {
-				await game.pause();
-			}
-
-			// 根据本轮结果更新活跃玩家列表，选择"否"的玩家退出
-			if (event.resultOL) {
-				event.activePlayers = event.activePlayers.filter(current => {
-					const result = event.resultOL[current.playerid];
-					return result && result.bool;
-				});
-			} else {
-				break;
-			}
+			event.activePlayers = accepted;
 		}
 	},
 	phase: [
@@ -7743,12 +7664,15 @@ export const Content: Record<string, ContentFuncByAll | ContentFuncsByAll> = {
 	async chooseButtonOL(event, trigger, player) {
 		const list: [Player, ...any[]][] = event.list;
 
-		const chooseRemote = (args, callback, switchToAuto, processAI) => {
+		const chooseRemote = (args, callback, switchToAuto, processAI, onfree) => {
 			const next = game.me.chooseButton(...args);
 			next.callback = callback;
 			next.switchToAuto = switchToAuto;
 			next.processAI = processAI;
 			next.complexSelect = true;
+			if (onfree) {
+				next.onfree = true;
+			}
 			game.resume();
 		};
 		const chooseLocal = (current: Player, args: any[]) => {
@@ -7756,13 +7680,16 @@ export const Content: Record<string, ContentFuncByAll | ContentFuncsByAll> = {
 			next.callback = event.callback;
 			next.switchToAuto = event.switchToAuto;
 			next.processAI = event.processAI;
+			if (event.onfree) {
+				next.onfree = true;
+			}
 			return next;
 		};
 		const choose = (current: Player, args: any[]) => {
 			return new Promise<Partial<Result>>(resolve => {
 				if (current.isOnline()) {
 					current.wait(result => resolve(result ?? {}));
-					current.send(chooseRemote, args, event.callback, event.switchToAuto, event.processAI);
+					current.send(chooseRemote, args, event.callback, event.switchToAuto, event.processAI, event.onfree);
 					return;
 				} else if (current === game.me) {
 					const next = chooseLocal(game.me, args);

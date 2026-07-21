@@ -120,26 +120,15 @@ main() {
     # 6. 启动服务
     log_info "步骤 6/6: 启动服务"
     
-    # 检查是否已有服务在运行
-    if pm2 list | grep -q "noname-static"; then
-        log_warning "检测到已有 noname 服务在运行"
-        read -p "是否重启服务? (y/n): " -n 1 -r
-        echo
-        if [[ $REPLY =~ ^[Yy]$ ]]; then
-            pm2 restart noname-static noname-websocket
-            log_success "服务重启完成"
-        else
-            log_info "跳过启动，保持现有服务运行"
-        fi
-    else
-        pm2 start ecosystem.config.cjs
-        log_success "服务启动完成"
-        
-        # 保存 PM2 配置
-        pm2 save
-        log_success "PM2 配置已保存"
-        
+    # 按 ecosystem.config.cjs 重建/启动（delete+start，确保 script 路径等配置变更生效；
+    # 仅 pm2 restart 不会更新入口文件，例如 index.cjs → cli.cjs）
+    if pm2 list | grep -qE "noname-static|noname-websocket"; then
+        log_warning "检测到已有 noname 服务在运行，将按最新 ecosystem 配置重建"
+        pm2 delete noname-static noname-websocket 2>/dev/null || true
     fi
+    pm2 start ecosystem.config.cjs
+    pm2 save
+    log_success "服务已按 ecosystem.config.cjs 启动，PM2 配置已保存"
     echo ""
 
     # 显示服务状态

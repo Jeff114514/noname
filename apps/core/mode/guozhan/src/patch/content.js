@@ -350,7 +350,7 @@ export const chooseCharacterContent = async (event, _trigger, _player) => {
 				ui.create.cheat();
 			}
 			// @ts-expect-error 祖宗之法就是这么写的
-			if (!ui.cheat2 && get.config("free_choose")) {
+			if (!ui.cheat2 && game.isFreeChooseEnabled()) {
 				ui.create.cheat2();
 			}
 		}
@@ -621,6 +621,7 @@ export const chooseCharacterOLContent = async (event, _trigger, _player) => {
 		void 0
 	);
 
+	next.set("onfree", true);
 	next.set("processAI", chooseCharacterCheck);
 	next.set("switchToAuto", () => {
 		Reflect.set(get.event(), "result", "ai");

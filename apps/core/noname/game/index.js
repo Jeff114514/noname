@@ -6628,6 +6628,25 @@ ${e instanceof Error ? e.stack : String(e)}`);
 			dialog.noforcebutton = true;
 			dialog.content.innerHTML = result;
 			dialog.forcebutton = true;
+			// 主机 poptip 的 dialog 回调不会随 innerHTML 下发；用 data-over-hs 在客机重建可点击手牌图标
+			for (const td of dialog.content.querySelectorAll("td[data-over-hs]")) {
+				let infos = [];
+				try {
+					infos = JSON.parse(td.getAttribute("data-over-hs") || "[]");
+				} catch (e) {
+					infos = [];
+				}
+				const playerName = td.getAttribute("data-over-name") || "";
+				const hs = infos.length ? get.infoCards(infos) : [];
+				td.innerHTML = get.poptip({
+					name: `<img style="width:15px; vertical-align: middle;" src="${lib.assetURL}image/card/handcard.png">`,
+					dialog(handDialog) {
+						handDialog.add(`${playerName}的手牌`);
+						handDialog[hs.length > 0 ? "addSmall" : "addText"](hs.length > 0 ? hs : "（没有手牌）");
+						return handDialog;
+					},
+				});
+			}
 			let result2 = arguments[1];
 			if (result2 == true) {
 				dialog.content.firstChild.innerHTML = "战斗胜利";
@@ -6898,15 +6917,18 @@ ${e instanceof Error ? e.stack : String(e)}`);
 				tr.appendChild(td);
 				td = document.createElement("td");
 				let target = game.players[i];
+				const hs = hsMap.get(target) ?? [];
+				const playerName = get.translation(target);
 				td.innerHTML = get.poptip({
 					name: `<img style="width:15px; vertical-align: middle;" src="${lib.assetURL}image/card/handcard.png">`,
-					dialog(dialog) {
-						let hs = hsMap.get(target) ?? [];
-						dialog.add(`${get.translation(target)}的手牌`);
-						dialog[hs.length > 0 ? "addSmall" : "addText"](hs.length > 0 ? hs : "（没有手牌）");
-						return dialog;
+					dialog(handDialog) {
+						handDialog.add(`${playerName}的手牌`);
+						handDialog[hs.length > 0 ? "addSmall" : "addText"](hs.length > 0 ? hs : "（没有手牌）");
+						return handDialog;
 					},
 				});
+				td.setAttribute("data-over-hs", JSON.stringify(get.cardsInfo(hs)));
+				td.setAttribute("data-over-name", playerName);
 				tr.appendChild(td);
 				table.appendChild(tr);
 			}
@@ -6991,15 +7013,18 @@ ${e instanceof Error ? e.stack : String(e)}`);
 				tr.appendChild(td);
 				td = document.createElement("td");
 				let target = game.dead[i];
+				const hs = hsMap.get(target) ?? [];
+				const playerName = get.translation(target);
 				td.innerHTML = get.poptip({
 					name: `<img style="width:15px; vertical-align: middle;" src="${lib.assetURL}image/card/handcard.png">`,
-					dialog(dialog) {
-						let hs = hsMap.get(target) ?? [];
-						dialog.add(`${get.translation(target)}的手牌`);
-						dialog[hs.length > 0 ? "addSmall" : "addText"](hs.length > 0 ? hs : "（没有手牌）");
-						return dialog;
+					dialog(handDialog) {
+						handDialog.add(`${playerName}的手牌`);
+						handDialog[hs.length > 0 ? "addSmall" : "addText"](hs.length > 0 ? hs : "（没有手牌）");
+						return handDialog;
 					},
 				});
+				td.setAttribute("data-over-hs", JSON.stringify(get.cardsInfo(hs)));
+				td.setAttribute("data-over-name", playerName);
 				tr.appendChild(td);
 				table.appendChild(tr);
 			}
@@ -7061,15 +7086,19 @@ ${e instanceof Error ? e.stack : String(e)}`);
 				tr.appendChild(td);
 				td = document.createElement("td");
 				let target = game.additionaldead[i];
+				const hs = hsMap.get(target) ?? [];
+				const playerName = get.translation(target);
 				td.innerHTML = get.poptip({
 					name: `<img style="width:15px; vertical-align: middle;" src="${lib.assetURL}image/card/handcard.png">`,
-					dialog(dialog) {
-						let hs = hsMap.get(target) ?? [];
-						dialog.add(`${get.translation(target)}的手牌`);
-						dialog[hs.length > 0 ? "addSmall" : "addText"](hs.length > 0 ? hs : "（没有手牌）");
-						return dialog;
+					dialog(handDialog) {
+						handDialog.add(`${playerName}的手牌`);
+						handDialog[hs.length > 0 ? "addSmall" : "addText"](hs.length > 0 ? hs : "（没有手牌）");
+						return handDialog;
 					},
 				});
+				td.setAttribute("data-over-hs", JSON.stringify(get.cardsInfo(hs)));
+				td.setAttribute("data-over-name", playerName);
+				tr.appendChild(td);
 				table.appendChild(tr);
 			}
 			dialog.add(ui.create.div(".placeholder"));

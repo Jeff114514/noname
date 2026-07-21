@@ -150,7 +150,8 @@ export function validateOLCharacterLinks(player, links, options = {}) {
 		});
 	}
 
-	return true;
+	// 联机且非自由选将时，无候选池记录则拒绝（避免漏接 setOLChoicePool 时默认放行）
+	return false;
 }
 
 /**
@@ -283,7 +284,31 @@ export function installFreeChooseButtonHandler(event) {
 		}
 		if (typeof userButton === "function") {
 			userButton(button);
+			return;
 		}
+		// 非自由选将页且无自定义 handler：回退默认选中逻辑
+		// （custom.replace.button 会完全接管 ui.click.button，若不处理则点将无反应）
+		if (!_status.event.isMine()) {
+			return;
+		}
+		if (!button.classList.contains("selectable")) {
+			return;
+		}
+		if (button.classList.contains("selected")) {
+			ui.selected.buttons.remove(button);
+			button.classList.remove("selected");
+			if (_status.multitarget || _status.event.complexSelect) {
+				game.uncheck();
+				game.check();
+			}
+		} else {
+			button.classList.add("selected");
+			ui.selected.buttons.add(button);
+		}
+		if (typeof _status.event.custom?.add?.button === "function") {
+			_status.event.custom.add.button();
+		}
+		game.check();
 	};
 }
 

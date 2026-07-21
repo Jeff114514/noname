@@ -7124,7 +7124,13 @@ export class Library {
 				},
 				connect_change_card: {
 					name: "开启手气卡",
-					init: false,
+					init: "disabled",
+					item: {
+						disabled: "禁用",
+						once: "一次",
+						twice: "两次",
+						unlimited: "无限",
+					},
 					frequent: true,
 					restart: true,
 				},

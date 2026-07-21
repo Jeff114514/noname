@@ -1,5 +1,6 @@
 export interface ServerOptions {
 	port?: number;
+	configDir?: string;
 }
 
 export interface ServerInstance {

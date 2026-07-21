@@ -473,9 +473,7 @@ export default () => {
 					}
 					return 4;
 				});
-				if (_status.connectMode && lib.configOL.change_card) {
-					game.replaceHandcards(game.players.slice(0));
-				}
+				game.replaceHandcardsAuto(game.players.slice(0));
 			},
 			async (event, trigger, player) => {
 				game.phaseLoop(event.beginner);

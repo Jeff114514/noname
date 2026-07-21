@@ -69,11 +69,11 @@ pnpm build   # 在 noname 仓库根目录执行
 
 **接入方式：**
 
-1. **通用选将** — `content.ts` 的 `chooseControl`：`setupFreeChoose` 在 `game.check()` 之前执行，步骤结束 `teardownFreeChoose`。
-2. **模式 OL** — `chooseButtonOL` 等：主机 `setOLChoicePool`，回调用 `initPlayerFromOLResult`（身份、国战、对抗、斗地主、单挑等已接入）。
-3. **模式自建 UI** — `event.onfree` + `setupFreeChoose`（参考 `mode/single.js`）。
+1. **通用选将** — `content.ts` 的 **`chooseButton`**（非 `chooseControl`）：`isMine()` 时若 `isFreeChooseEnabled()` 且为武将对话框，则 `setupFreeChoose` → `resetFreeChooseSelection` → `game.check()`；步骤结束 `teardownFreeChoose`。
+2. **模式 OL** — `chooseButtonOL`：主机 `setOLChoicePool`，回调用 `initPlayerFromOLResult`；建议 `.set("onfree", true)` 以便子 `chooseButton` 触发 `lib.init.onfree`（身份、国战、对抗、斗地主、单挑等已接入）。`chooseButtonOL` 本身不经过上述钩子，依赖下发到客机的 `chooseButton`。
+3. **模式自建 UI** — `event.onfree` + `setupFreeChoose`（参考 `mode/single.js`、`versus.js` 2v2）。
 
-**校验：** 自由选将开 → 武将须在 `getOLCharacterPool()` 内（含 `characterReplace`）；关 → 须在 `setOLChoicePool` 记录的候选内。勿在各模式复制 `ui.cheat2` 与校验代码。
+**校验：** 自由选将开 → 武将须在 `getOLCharacterPool()` 内（含 `characterReplace`）；关 → 须在 `setOLChoicePool` 记录的候选内，**无候选池记录时拒绝**（勿默认放行）。勿在各模式复制 `ui.cheat2` 与校验代码。
 
 ### 已知问题与修复要点
 
@@ -116,9 +116,9 @@ pnpm build   # 在 noname 仓库根目录执行
 | 函数/流程 | 改动要点 |
 |-----------|----------|
 | `gameDraw` 相关 | 联机 `change_card` 用 `game.getOLChangeCard()`；联机手气卡 UI 走 `replaceHandcardsOL` |
-| `replaceHandcards` / `replaceHandcardsOL` | 联机多轮、`activePlayers`；**先**对在线他人 `send`，**再** `await` 本地 `game.me`（见 `step-to-async-guide.md`） |
+| `replaceHandcards` / `replaceHandcardsOL` | 多轮 `changeCard`；每轮先并行 `choose` 再串行换牌；弃牌须 `broadcastAll` |
 | `gameStart` | 清理 `ui.roomConfigButton` |
-| `chooseControl` | `setupFreeChoose` / `teardownFreeChoose`；与 `resetFreeChooseSelection`、 `game.check()` 顺序正确 |
+| `chooseButton` | `setupFreeChoose` / `teardownFreeChoose`；与 `resetFreeChooseSelection`、`game.check()` 顺序正确 |
 | `showCards` / 牌堆顶 | 联机 broadcast 用 `pileTop` 等参数，避免沙盒里裸写 `top` → `window.top` |
 
 ---
