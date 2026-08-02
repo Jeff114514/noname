@@ -67,6 +67,7 @@ const skills = {
 				},
 			},
 			gain: {
+				audio: "olremaozhu",
 				trigger: { player: "phaseEnd" },
 				filter(event, player) {
 					return player.getStorage("olrejinlan_map").length;
@@ -85,7 +86,17 @@ const skills = {
 					}
 					const result = await player
 						.chooseButton({
-							createDialog: ["茂著：获得一个技能直到你的下回合结束", [skills, "skill"]],
+							createDialog: [
+								"茂著：获得一个技能直到你的下回合结束",
+								[
+									skills,
+									(item, type, position, noclick, node) => {
+										node = ui.create.buttonPresets.skill(item, type, position, noclick);
+										node.setBackground("ol_peixiu", "character");
+										return node;
+									},
+								],
+							],
 							forced: true,
 						})
 						.forResult();
@@ -34037,7 +34048,7 @@ const skills = {
 	},
 	chouce: {
 		audio: 2,
-		audioname2: { sxrm_caocao: "chouce_sxrm_caocao" },
+		audioname2: { sxrm_caocao: "chouce_sxrm_caocao", tw_sxrm_caocao: "chouce_sxrm_caocao" },
 		trigger: { player: "damageEnd" },
 		getIndex: event => event.num,
 		filter(event) {
@@ -37694,7 +37705,7 @@ const skills = {
 	},
 	benyu: {
 		audio: 2,
-		audioname2: { sxrm_caocao: "benyu_sxrm_caocao" },
+		audioname2: { sxrm_caocao: "benyu_sxrm_caocao", tw_sxrm_caocao: "benyu_sxrm_caocao" },
 		trigger: { player: "damageEnd" },
 		filter(event, player) {
 			if (!event.source) {
@@ -40873,7 +40884,7 @@ const skills = {
 	jilei: {
 		trigger: { player: "damageEnd" },
 		audio: 2,
-		audioname2: { sxrm_caocao: "jilei_sxrm_caocao" },
+		audioname2: { sxrm_caocao: "jilei_sxrm_caocao", tw_sxrm_caocao: "jilei_sxrm_caocao" },
 		filter(event) {
 			return event.source && event.source.isIn();
 		},
@@ -47505,6 +47516,123 @@ const skills = {
 							return [1, 1.5 * shas];
 						}
 					}
+				},
+			},
+		},
+	},
+	//ol段煨 子右：R1+□🙌🏻😡↓→+□□□□😡🤜🏻power up！
+	oltaohuai: {
+		audio: 3,
+		zhuanhuanji: true,
+		trigger: { player: "useCard" },
+		filter(event, player) {
+			return player.hasHistory("lose", evt => {
+				if ((evt.relatedEvent || evt.getParent()) !== event) return false;
+				return evt.hs.some(card => typeof get.number(card, player) === "number");
+			});
+		},
+		async cost(event, trigger, player) {
+			if (
+				(() => {
+					const hs = player.getCards("h", card => typeof get.number(card, player) === "number");
+					if (!hs.length) return true;
+					const evt = player.getHistory("lose", evt => (evt.relatedEvent || evt.getParent()) === trigger)[0];
+					const evths = evt.hs.filter(card => typeof get.number(card, player) === "number");
+					const numbers = [...hs, ...evths]
+						.unique()
+						.map(card => get.number(card, player))
+						.sort((a, b) => a - b);
+					const [max, min] = [numbers.at(-1), numbers[0]];
+					return evths.some(card => {
+						const number = get.number(card, player);
+						return number === (player.storage[event.skill] ? min : max);
+					});
+				})()
+			)
+				event.result = { bool: true };
+			else {
+				event.result = await player
+					.chooseToDiscard({
+						prompt: `${get.translation(event.skill)}：是否弃置一张牌？`,
+						position: "he",
+						ai(card) {
+							const player = get.player();
+							if (!player.isPhaseUsing() || player.hasValueTarget(card, true, true)) return -1;
+							const number = get.number(card);
+							if (get.position(card) !== "h" || typeof number !== "number") return -1;
+							const hs = player.getCards("h", card => typeof get.number(card, player) === "number");
+							const numbers = hs.map(card => get.number(card, player)).sort((a, b) => a - b);
+							const [max, min] = [numbers.at(-1), numbers[0]];
+							if (number !== (player.storage.oltaohuai ? min : max)) return -1;
+							const hs2 = player.getCards("h", card2 => card2 !== card).sort((a, b) => get.number(a) - get.number(b));
+							if (!hs2.length) return -1;
+							return player.hasValueTarget(player.storage.oltaohuai ? hs2[0] : hs2.at(-1), true, true) ? 10 : -1;
+						},
+						chooseonly: true,
+					})
+					.forResult();
+			}
+		},
+		locked: true,
+		async content(event, trigger, player) {
+			if (event.cards?.length) await player.discard(event.cards);
+			else {
+				player.changeZhuanhuanji(event.name);
+				await player.draw();
+			}
+		},
+		mark: true,
+		marktext: "☯",
+		intro: {
+			content(storage) {
+				return `使用手牌中点数最${storage ? "小" : "大"}的牌时摸一张牌，否则你可以弃置一张牌`;
+			},
+		},
+		init(player, skill) {
+			player.addSkill(`${skill}_record`);
+		},
+		onremove(player, skill) {
+			player.removeSkill(`${skill}_record`);
+		},
+		subSkill: {
+			record: {
+				charlotte: true,
+				init(player, skill) {
+					const hs = player.getCards("h", card => typeof get.number(card, player) === "number");
+					const numbers = hs.map(card => get.number(card, player)).sort((a, b) => a - b);
+					const [max, min] = [numbers.at(-1), numbers[0]];
+					const hs2 = hs.filter(card => get.number(card, player) === (player.storage.oltaohuai ? min : max));
+					const hs3 = [...hs].removeArray(hs2);
+					player.addGaintag(hs2, skill);
+					player.removeGaintag(skill, hs3);
+				},
+				onremove(player, skill) {
+					player.removeGaintag(skill);
+				},
+				trigger: {
+					player: ["loseEnd", "changeZhuanhuanjiBegin", "enterGame"],
+					global: ["phaseBefore", "loseAsyncEnd", "gainEnd", "equipEnd", "addJudgeEnd", "addToExpansionEnd"],
+				},
+				filter(event, player, name) {
+					if (name === "changeZhuanhuanjiBegin") {
+						if (event.skill !== "oltaohuai") return false;
+					} else if (!["enterGame", "phaseBefore"].includes(name)) {
+						let gain = 0,
+							lose = 0;
+						if (event.getg) gain = event.getg(player).length;
+						if (event.getl) lose = event.getl(player).hs.length;
+						if (gain === lose) return false;
+					}
+					const hs = player.getCards("h", card => typeof get.number(card, player) === "number");
+					if (!hs.length) return false;
+					const numbers = hs.map(card => get.number(card, player)).sort((a, b) => a - b);
+					const [max, min] = [numbers.at(-1), numbers[0]];
+					const hs2 = hs.filter(card => get.number(card, player) === (player.storage.oltaohuai ? min : max));
+					return hs.some(card => hs2.includes(card) === !card.hasGaintag("oltaohuai_record"));
+				},
+				silent: true,
+				async content(event, trigger, player) {
+					lib.skill[event.name].init(player, event.name);
 				},
 			},
 		},
