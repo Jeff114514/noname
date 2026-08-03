@@ -550,7 +550,7 @@ while (true) {
 }
 ```
 
-联机手气卡配置读取：房间配置写入 `lib.configOL` 时会去掉 `connect_` 前缀，应使用 `game.getOLChangeCard()`（即 `lib.configOL.change_card`，并兼容 `connect_change_card`）。各模式开局请调用 `game.replaceHandcardsAuto(players)`，不要重复判断配置。
+联机手气卡：开局仅走 **`game.replaceHandcardsAuto(players)`**（`gameDraw` 不再内联手气卡）。次数用 **`game.getChangeCardRemaining()`** 归一（含菜单 `custom` + `change_card_num` / `connect_change_card_num`）；**`game.getOLChangeCard()`** 为薄封装（`lib.configOL` 去 `connect_` 前缀，兼容 `connect_change_card`）。勿在模式内重复判断配置。
 
 **联机自由选将（`connectFreeChoose`）：**
 
@@ -705,7 +705,7 @@ pm2 start ecosystem.config.cjs
 8. **现代包 vs 旧包**：修改 `character/` 或 `mode/` 下的代码时，注意区分已现代化的目录结构包（有 `index.ts`，在 `moderned_characters` / `moderned_modes` 列表中）和传统的单文件包，它们的构建处理方式不同。
 9. **文件编码与缩进陷阱**：大量历史 `.js` 使用 **Tab 缩进** 和 **CRLF 换行**（`\r\n`），如 `library/index.js`；新迁移的 `content.ts` 等文件可能为 LF。替换前确认目标文件的实际换行与缩进，避免匹配失败。
 10. **联机自由选将**：联机选将结果须经 `game.initPlayerFromOLResult` 与 `game.setOLChoicePool` 配合校验；UI 与全将池逻辑见 `noname/game/connectFreeChoose.js`，勿在模式里复制一套 `ui.cheat2`。
-11. **内置事件内容在 `content.ts`**：手气卡（`replaceHandcards` / `replaceHandcardsOL`）、`gameStart` 清理、`chooseControl` 自由选将钩子等 Fork 改动均在此文件；合并上游后应用 `git diff` 或搜索 `getOLChangeCard`、`setupFreeChoose`、`roomConfigButton` 确认未丢失。
+11. **内置事件内容在 `content.ts`**：手气卡仅在独立事件（`replaceHandcards` / `replaceHandcardsOL` / `swapStartHand`），`gameDraw` 不再内联；`gameStart` 清理、`chooseControl` 自由选将钩子等 Fork 改动亦在此文件。合并后搜索 `getChangeCardRemaining`、`getOLChangeCard`、`replaceHandcardsAuto`、`setupFreeChoose`、`roomConfigButton` 确认未丢失。
 12. **与上游合并**：存在 `upstream` 远程时定期 `git fetch upstream && git merge upstream/main`；若 GitHub 网页提示冲突而本地 merge 成功，以本地三方合并结果为准，合并后务必 `pnpm build` 并手测联机相关功能。
 13. **调试日志**：**禁止** ingest HTTP；用 `.cursor/debug.log` 或 `console.debug('[agent-debug]', …)`。改 `mode/*.js` 后执行 **`pnpm build`** 即可同步到 `dist`（勿手抄 `cp`）。详见 `docs/agent-debugging.md`。
 14. **身份局新手教程**：`mode/identity.js` 首次 `new_tutorial` 流程中，用户点「跳过向导」应回到 **启动 splash 模式选择**（清除 `directstart` 与 `show_splash_off` 后 `location.reload()`）；勿用 `game.reload()`（会写入 `show_splash_off`）或仅 `configMenu()`（易出现空界面）。完成教程仍走原开局流程。
@@ -732,7 +732,7 @@ pm2 start ecosystem.config.cjs
 |------|----------|
 | 联机选将 / 校验 | `noname/game/connectFreeChoose.js`、`library/element/content.ts`（`chooseControl`）、各 `mode/*` 的 OL 选将 |
 | 房间配置 / 云端 | `noname/game/roomConfig.js`、`packages/server`、`library/index.js`（`roomConfigButton`） |
-| 手气卡 / 开局 | `content.ts`（`replaceHandcards*`、`gameStart`）、`game.getOLChangeCard()` |
+| 手气卡 / 开局 | `game.replaceHandcardsAuto`、`game.getChangeCardRemaining()`（`game/index.js`）；`content.ts`（`replaceHandcards*`、`swapStartHand`、`gameStart`）；菜单 `change_card_num` / `connect_change_card_num` |
 | 身份局流程 | `mode/identity.js` |
 | 武将技能 | `character/<包名>/skill.js`（现代化包可能为 `index.ts` 入口 + 子模块） |
 | 启动 / splash | `noname/init/index.ts`、`noname/init/onload/*-splash.ts` |

@@ -98,7 +98,7 @@ pnpm build   # 在 noname 仓库根目录执行
 | UI | `library/index.js` 创建 `ui.roomConfigButton`；`content.ts` 的 `gameStart` 等清理该按钮 |
 | 大厅昵称 | `refreshConnectNickname()`：应用配置后刷新联机大厅显示 |
 
-`lib.configOL` 写入时会去掉 `connect_` 前缀；手气卡等用 **`game.getOLChangeCard()`**（兼容 `connect_change_card`）。模式开局调用 **`game.replaceHandcardsAuto(players)`**，勿重复判断配置。
+`lib.configOL` 写入时会去掉 `connect_` 前缀。手气卡仅由 **`game.replaceHandcardsAuto(players)`** 开局入口创建（`gameDraw` 不再内联弹窗）。次数归一用 **`game.getChangeCardRemaining()`**（菜单 `disabled` / `once` / `twice` / `unlimited` / `custom`；自定义次数存 `change_card_num` / `connect_change_card_num`，同步到 OL 后为 `change_card_num`）。**`game.getOLChangeCard()`** 保留为薄封装（兼容旧调用与 `connect_change_card`）。勿在模式内重复判断配置。
 
 ### 联机昵称（Fork 修复）
 
@@ -115,8 +115,8 @@ pnpm build   # 在 noname 仓库根目录执行
 
 | 函数/流程 | 改动要点 |
 |-----------|----------|
-| `gameDraw` 相关 | 联机 `change_card` 用 `game.getOLChangeCard()`；联机手气卡 UI 走 `replaceHandcardsOL` |
-| `replaceHandcards` / `replaceHandcardsOL` | 多轮 `changeCard`；每轮先并行 `choose` 再串行换牌；弃牌须 `broadcastAll` |
+| `gameDraw` | 仅开局发牌（`otherPile` / `gaintag` 等）；**不**读 `change_card`、不弹手气卡 |
+| `replaceHandcards` / `replaceHandcardsOL` / `swapStartHand` | 由 `replaceHandcardsAuto` 统一入口；多轮按 `getChangeCardRemaining()`；联机每轮先并行 `choose` 再串行 `swapStartHand`；弃牌/带 `gaintag` 获得须 `broadcastAll` |
 | `gameStart` | 清理 `ui.roomConfigButton` |
 | `chooseButton` | `setupFreeChoose` / `teardownFreeChoose`；与 `resetFreeChooseSelection`、`game.check()` 顺序正确 |
 | `showCards` / 牌堆顶 | 联机 broadcast 用 `pileTop` 等参数，避免沙盒里裸写 `top` → `window.top` |
