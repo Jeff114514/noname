@@ -649,9 +649,7 @@ export default () => {
 				}
 				return player.maxHp;
 			});
-			if (_status.connectMode) {
-				game.replaceHandcardsAuto(game.players.slice(0));
-			}
+			game.replaceHandcardsAuto(game.players.slice(0));
 			"step 4";
 			game.phaseLoop(game.zhu);
 			game.countPlayer(current => current.showGiveup(), true);

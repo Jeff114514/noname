@@ -306,9 +306,7 @@ export const start = async (event, trigger, player) => {
 			game.players[i].ai.shown = 0;
 		}
 	}
-	if (_status.connectMode) {
-		game.replaceHandcardsAuto(game.players.slice(0));
-	}
+	game.replaceHandcardsAuto(game.players.slice(0));
 
 	await game.phaseLoop(playerFirst);
 };

@@ -177,9 +177,7 @@ export default () => {
 					return player == game.zhu ? 5 : 4;
 				};
 			}
-			if (_status.connectMode) {
-				game.replaceHandcardsAuto(game.players.slice(0));
-			}
+			game.replaceHandcardsAuto(game.players.slice(0));
 			game.phaseLoop(game.zhu || _status.firstAct || game.me);
 			game.zhu.showGiveup();
 		},

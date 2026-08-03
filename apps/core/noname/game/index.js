@@ -1820,7 +1820,6 @@ export class Game {
 		}
 		next.changeCardRemaining = game.getChangeCardRemaining();
 		if (_status.connectMode) {
-			next.changeCard = game.getOLChangeCard();
 			next.setContent("replaceHandcardsOL");
 		} else {
 			next.setContent("replaceHandcards");
