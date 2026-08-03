@@ -6,6 +6,80 @@ import type { GainAnimate } from "./Player/type";
 
 import { delay } from "@/util/index.js";
 
+type ReplaceHandcardsEvent = {
+	otherPile?: Record<string, { getCards?: (num: number) => any[]; discard?: (card: any) => void }>;
+	gaintag?: Record<string, any>;
+};
+
+function swapStartHand(player: any, event: ReplaceHandcardsEvent, { broadcast = false } = {}) {
+	const hs = player.getCards("h");
+	const cards: any[] = [];
+	const otherGetCards = event.otherPile?.[player.playerid]?.getCards;
+	const otherDiscard = event.otherPile?.[player.playerid]?.discard;
+
+	const loseHs = () => {
+		game.addVideo("lose", player, [get.cardsInfo(hs), [], [], []]);
+		for (const card of hs) {
+			card.removeGaintag(true);
+			if (otherDiscard) {
+				otherDiscard(card);
+			} else {
+				card.discard(false);
+			}
+		}
+	};
+
+	if (broadcast) {
+		game.broadcastAll(
+			(p, hand, discardFn) => {
+				game.addVideo("lose", p, [get.cardsInfo(hand), [], [], []]);
+				for (const card of hand) {
+					card.removeGaintag(true);
+					if (discardFn) {
+						discardFn(card);
+					} else {
+						card.discard(false);
+					}
+				}
+			},
+			player,
+			hs,
+			otherDiscard
+		);
+	} else {
+		loseHs();
+	}
+
+	if (otherGetCards) {
+		cards.addArray(otherGetCards(hs.length));
+	} else {
+		cards.addArray(get.cards(hs.length));
+	}
+
+	if (event.gaintag?.[player.playerid]) {
+		const gaintag = event.gaintag[player.playerid];
+		const list = typeof gaintag == "function" ? gaintag(hs.length, cards) : [[cards, gaintag]];
+		if (broadcast) {
+			game.broadcastAll(
+				(p, gainList) => {
+					for (let i = gainList.length - 1; i >= 0; i--) {
+						p.directgain(gainList[i][0], null, gainList[i][1]);
+					}
+				},
+				player,
+				list
+			);
+		} else {
+			for (let i = list.length - 1; i >= 0; i--) {
+				player.directgain(list[i][0], null, list[i][1]);
+			}
+		}
+	} else {
+		player.directgain(cards);
+	}
+	player._start_cards = player.getCards("h");
+}
+
 // 未来再改
 export const Content: Record<string, ContentFuncByAll | ContentFuncsByAll> = {
 	async emptyEvent(event) {
@@ -3694,106 +3768,7 @@ export const Content: Record<string, ContentFuncByAll | ContentFuncsByAll> = {
 			player = player.next;
 		} while (player != end);
 
-		event.changeCard = get.config("change_card");
-		if (_status.connectMode) {
-			// 联机模式使用联机配置（lib.configOL.change_card，见 game.getOLChangeCard）
-			event.changeCard = game.getOLChangeCard() || "disabled";
-		} else if (lib.config.mode == "doudizhu" && _status.mode == "online") {
-			// 斗地主在线模式禁用
-			event.changeCard = "disabled";
-		} else if (!get.config("change_card") || get.config("change_card") == "disabled") {
-			// 单机模式根据配置决定
-			event.changeCard = "disabled";
-		}
-
 		await Promise.all(waitings);
-
-		if (!targets.includes(game.me) || event.changeCard == "disabled" || _status.auto || !game.me.countCards("h")) {
-			return;
-		}
-		// 联机模式下手气卡由 replaceHandcardsOL 统一处理
-		if (_status.connectMode) {
-			return;
-		}
-
-		event.dialog = ui.create.dialog("是否使用手气卡？");
-		ui.create.confirm("oc");
-		event.custom.replace.confirm = bool => {
-			_status.event.bool = bool;
-			game.resume();
-		};
-
-		while (true) {
-			if (event.changeCard == "once") {
-				event.changeCard = "disabled";
-			} else if (event.changeCard == "twice") {
-				event.changeCard = "once";
-			} else if (event.changeCard == "disabled") {
-				event.bool = false;
-				_status.imchoosing = false;
-				break;
-			}
-
-			_status.imchoosing = true;
-			event.switchToAuto = () => {
-				_status.event.bool = false;
-				game.resume();
-			};
-			await game.pause();
-			_status.imchoosing = false;
-			if (!event.bool) {
-				break;
-			}
-
-			if (game.changeCoin) {
-				game.changeCoin(-3);
-			}
-			/*otherPile主要是针对那些用专属牌堆，不从一般牌堆摸牌的角色（如陈寿），该属性目前只有两个键值对，且都为函数
-			 *getCards函数与获得牌相关，只传入要获得的牌数num作为参数
-			 *discard与手气卡换牌后弃置牌相关，只传入要弃置的牌card作为参数
-			 */
-			const hs = game.me.getCards("h");
-			const cards = [];
-			const otherGetCards = event.otherPile?.[game.me.playerid]?.getCards;
-			const otherDiscacrd = event.otherPile?.[game.me.playerid]?.discard;
-			//先弃牌
-			game.addVideo("lose", game.me, [get.cardsInfo(hs), [], [], []]);
-			for (const card of hs) {
-				card.removeGaintag(true);
-				if (otherDiscacrd) {
-					otherDiscacrd(card);
-				} else {
-					card.discard(false);
-				}
-			}
-			//再摸牌，先看有没有专属牌堆
-			if (otherGetCards) {
-				cards.addArray(otherGetCards(hs.length));
-			} else {
-				cards.addArray(get.cards(hs.length));
-			}
-			//添加标记相关
-			//别问，问就是初始手牌要有标记 by 星の语
-			//event.gaintag支持函数、字符串、数组。数组就是添加一连串的标记；函数的返回格式为[[cards1,gaintag1],[cards2,gaintag2]...]
-			if (event.gaintag?.[game.me.playerid]) {
-				const gaintag = event.gaintag[game.me.playerid];
-				const list = typeof gaintag == "function" ? gaintag(hs.length, cards) : [[cards, gaintag]];
-				for (let i = list.length - 1; i >= 0; i--) {
-					game.me.directgain(list[i][0], null, list[i][1]);
-				}
-			} else {
-				game.me.directgain(cards);
-			}
-			game.me._start_cards = game.me.getCards("h");
-		}
-
-		if (event.dialog) {
-			event.dialog.close();
-		}
-		if (ui.confirm) {
-			ui.confirm.close();
-		}
-		game.me._start_cards = game.me.getCards("h");
 	},
 	async phaseLoop(event, trigger, player) {
 		let num = 1;
@@ -4497,61 +4472,40 @@ export const Content: Record<string, ContentFuncByAll | ContentFuncsByAll> = {
 		}
 	},
 	async replaceHandcards(event, trigger, player) {
-		if (!event.players.includes(game.me)) {
+		let remaining = event.changeCardRemaining ?? 0;
+		if (remaining === 0) {
+			return;
+		}
+		if (!event.players.includes(game.me) || _status.auto || !game.me.countCards("h")) {
 			return;
 		}
 
-		const result = await game.me.chooseBool("是否置换手牌？").forResult();
-		if (result && result.bool) {
-			/*otherPile主要是针对那些用专属牌堆，不从一般牌堆摸牌的角色（如陈寿），该属性目前只有两个键值对，且都为函数
-			 *getCards函数与获得牌相关，只传入要获得的牌数num作为参数
-			 *discard与手气卡换牌后弃置牌相关，只传入要弃置的牌card作为参数
-			 */
-			const hs = game.me.getCards("h");
-			const cards = [];
-			const otherGetCards = event.otherPile?.[game.me.playerid]?.getCards;
-			const otherDiscacrd = event.otherPile?.[game.me.playerid]?.discard;
-			//先弃牌
-			game.addVideo("lose", game.me, [get.cardsInfo(hs), [], [], []]);
-			for (const card of hs) {
-				card.removeGaintag(true);
-				if (otherDiscacrd) {
-					otherDiscacrd(card);
-				} else {
-					card.discard(false);
-				}
+		while (remaining !== 0) {
+			const result = await game.me.chooseBool("是否使用手气卡？").forResult();
+			if (!result?.bool) {
+				break;
 			}
-			//再摸牌，先看有没有专属牌堆
-			if (otherGetCards) {
-				cards.addArray(otherGetCards(hs.length));
-			} else {
-				cards.addArray(get.cards(hs.length));
+			if (typeof game.changeCoin === "function") {
+				game.changeCoin(-3);
 			}
-			//添加标记相关
-			//event.gaintag支持函数、字符串、数组。数组就是添加一连串的标记；函数的返回格式为[[cards1,gaintag1],[cards2,gaintag2]...]
-			if (event.gaintag?.[game.me.playerid]) {
-				const gaintag = event.gaintag[game.me.playerid];
-				const list = typeof gaintag == "function" ? gaintag(hs.length, cards) : [[cards, gaintag]];
-				for (let i = list.length - 1; i >= 0; i--) {
-					game.me.directgain(list[i][0], null, list[i][1]);
-				}
-			} else {
-				game.me.directgain(cards);
+			swapStartHand(game.me, event, { broadcast: false });
+			if (remaining !== Infinity) {
+				remaining -= 1;
 			}
-			game.me._start_cards = cards;
 		}
 	},
 	async replaceHandcardsOL(event, trigger, player) {
-		if (!event.changeCard || event.changeCard === "disabled") {
+		let remaining = event.changeCardRemaining ?? 0;
+		if (remaining === 0) {
 			return;
 		}
 
 		const chooseRemote = () => {
-			game.me.chooseBool({ prompt: "是否置换手牌？" });
+			game.me.chooseBool({ prompt: "是否使用手气卡？" });
 			game.resume();
 		};
 		const chooseMe = () => {
-			return game.me.chooseBool({ prompt: "是否置换手牌？" });
+			return game.me.chooseBool({ prompt: "是否使用手气卡？" });
 		};
 		const choose = (current: Player) => {
 			return new Promise<boolean>(resolve => {
@@ -4571,79 +4525,9 @@ export const Content: Record<string, ContentFuncByAll | ContentFuncsByAll> = {
 			});
 		};
 
-		const replaceOne = (current: Player) => {
-			/*otherPile主要是针对那些用专属牌堆，不从一般牌堆摸牌的角色（如陈寿），该属性目前只有两个键值对，且都为函数
-			 *getCards函数与获得牌相关，只传入要获得的牌数num作为参数
-			 *discard与手气卡换牌后弃置牌相关，只传入要弃置的牌card作为参数
-			 */
-			const hs = current.getCards("h");
-			const cards: Card[] = [];
-			const otherGetCards = event.otherPile?.[current.playerid]?.getCards;
-			const otherDiscard = event.otherPile?.[current.playerid]?.discard;
-			//先弃牌（须 broadcastAll，客机才能同步弃牌状态）
-			game.broadcastAll(
-				(player, hs, otherDiscard) => {
-					game.addVideo("lose", player, [get.cardsInfo(hs), [], [], []]);
-					for (const card of hs) {
-						card.removeGaintag(true);
-						if (otherDiscard) {
-							otherDiscard(card);
-						} else {
-							card.discard(false);
-						}
-					}
-				},
-				current,
-				hs,
-				otherDiscard
-			);
-			//再摸牌，先看有没有专属牌堆
-			if (otherGetCards) {
-				cards.addArray(otherGetCards(hs.length));
-			} else {
-				cards.addArray(get.cards(hs.length));
-			}
-			//添加标记相关
-			//event.gaintag支持函数、字符串、数组。数组就是添加一连串的标记；函数的返回格式为[[cards1,gaintag1],[cards2,gaintag2]...]
-			if (event.gaintag?.[current.playerid]) {
-				const gaintag = event.gaintag[current.playerid];
-				const list = typeof gaintag == "function" ? gaintag(hs.length, cards) : [[cards, gaintag]];
-				game.broadcastAll(
-					(player, list) => {
-						for (let i = list.length - 1; i >= 0; i--) {
-							player.directgain(list[i][0], null, list[i][1]);
-						}
-					},
-					current,
-					list
-				);
-			} else {
-				current.directgain(cards);
-			}
-			current._start_cards = current.getCards("h");
-		};
+		event.activePlayers = event.players.filter(p => p.countCards("h") > 0);
 
-		event.activePlayers = event.players.slice();
-
-		while (true) {
-			if (!event.activePlayers.length) {
-				break;
-			}
-
-			if (event.changeCard == "disabled") {
-				break;
-			}
-
-			// 更新状态：once→disabled, twice→once, unlimited 保持不变
-			if (event.changeCard == "once") {
-				event.changeCard = "disabled";
-			} else if (event.changeCard == "twice") {
-				event.changeCard = "once";
-			} else if (event.changeCard == "unlimited") {
-				// 无限次使用，不改变状态
-			}
-
-			// 阶段一：并行询问所有活跃玩家
+		while (remaining !== 0 && event.activePlayers.length) {
 			const decisions = await Promise.all(
 				event.activePlayers.map(async current => {
 					try {
@@ -4655,12 +4539,14 @@ export const Content: Record<string, ContentFuncByAll | ContentFuncsByAll> = {
 			);
 			const accepted = decisions.filter((current): current is Player => !!current);
 
-			// 阶段二：串行换牌，保证牌堆顺序稳定
 			for (const current of accepted) {
-				replaceOne(current);
+				swapStartHand(current, event, { broadcast: true });
 			}
 
 			event.activePlayers = accepted;
+			if (remaining !== Infinity) {
+				remaining -= 1;
+			}
 		}
 	},
 	phase: [
