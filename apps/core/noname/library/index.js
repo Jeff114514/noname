@@ -5791,6 +5791,13 @@ export class Library {
 							map.connect_free_choose.show();
 						}
 					}
+					if (map.connect_change_card_num) {
+						if (config.connect_change_card === "custom") {
+							map.connect_change_card_num.show();
+						} else {
+							map.connect_change_card_num.hide();
+						}
+					}
 				},
 				connect_identity_mode: {
 					name: "游戏模式",
@@ -5968,9 +5975,31 @@ export class Library {
 						once: "一次",
 						twice: "两次",
 						unlimited: "无限",
+						custom: "自定义",
 					},
 					frequent: true,
 					restart: true,
+				},
+				connect_change_card_num: {
+					name: "手气卡次数",
+					init: 3,
+					input: true,
+					restart: true,
+					frequent: true,
+					onblur(e) {
+						let text = e.target,
+							num = Number(text.innerText);
+						if (isNaN(num) || num < 1) {
+							num = 1;
+						} else if (!Number.isInteger(num)) {
+							num = Math.round(num);
+						}
+						text.innerText = num;
+						game.saveConfig("connect_change_card_num", num, "identity");
+						if (_status.connectMode && lib.configOL) {
+							lib.configOL.change_card_num = num;
+						}
+					},
 				},
 				connect_special_identity: {
 					name: "特殊身份",
@@ -6182,6 +6211,13 @@ export class Library {
 							map.double_hp.hide();
 						}
 					}
+					if (map.change_card_num) {
+						if (config.change_card === "custom") {
+							map.change_card_num.show();
+						} else {
+							map.change_card_num.hide();
+						}
+					}
 				},
 				identity_mode: {
 					name: "游戏模式",
@@ -6379,6 +6415,24 @@ export class Library {
 						once: "一次",
 						twice: "两次",
 						unlimited: "无限",
+						custom: "自定义",
+					},
+				},
+				change_card_num: {
+					name: "手气卡次数",
+					init: 3,
+					input: true,
+					restart: true,
+					onblur(e) {
+						let text = e.target,
+							num = Number(text.innerText);
+						if (isNaN(num) || num < 1) {
+							num = 1;
+						} else if (!Number.isInteger(num)) {
+							num = Math.round(num);
+						}
+						text.innerText = num;
+						game.saveConfig("change_card_num", num, "identity");
 					},
 				},
 				round_one_use_fury: {
@@ -6637,6 +6691,15 @@ export class Library {
 		guozhan: {
 			name: "国战",
 			connect: {
+				update: function (config, map) {
+					if (map.connect_change_card_num) {
+						if (config.connect_change_card === "custom") {
+							map.connect_change_card_num.show();
+						} else {
+							map.connect_change_card_num.hide();
+						}
+					}
+				},
 				connect_guozhan_mode: {
 					name: "游戏模式",
 					init: "normal",
@@ -6714,9 +6777,31 @@ export class Library {
 						once: "一次",
 						twice: "两次",
 						unlimited: "无限",
+						custom: "自定义",
 					},
 					frequent: true,
 					restart: true,
+				},
+				connect_change_card_num: {
+					name: "手气卡次数",
+					init: 3,
+					input: true,
+					restart: true,
+					frequent: true,
+					onblur(e) {
+						let text = e.target,
+							num = Number(text.innerText);
+						if (isNaN(num) || num < 1) {
+							num = 1;
+						} else if (!Number.isInteger(num)) {
+							num = Math.round(num);
+						}
+						text.innerText = num;
+						game.saveConfig("connect_change_card_num", num, "guozhan");
+						if (_status.connectMode && lib.configOL) {
+							lib.configOL.change_card_num = num;
+						}
+					},
 				},
 				connect_free_choose: {
 					name: "自由选将",
@@ -6740,6 +6825,13 @@ export class Library {
 					}
 					ui.aozhan_bgm = map.aozhan_bgm;
 					map.aozhan_bgm._link.config.updatex.call(map.aozhan_bgm, []);
+					if (map.change_card_num) {
+						if (config.change_card === "custom") {
+							map.change_card_num.show();
+						} else {
+							map.change_card_num.hide();
+						}
+					}
 				},
 				guozhan_mode: {
 					name: "游戏模式",
@@ -6974,6 +7066,24 @@ export class Library {
 						once: "一次",
 						twice: "两次",
 						unlimited: "无限",
+						custom: "自定义",
+					},
+				},
+				change_card_num: {
+					name: "手气卡次数",
+					init: 3,
+					input: true,
+					restart: true,
+					onblur(e) {
+						let text = e.target,
+							num = Number(text.innerText);
+						if (isNaN(num) || num < 1) {
+							num = 1;
+						} else if (!Number.isInteger(num)) {
+							num = Math.round(num);
+						}
+						text.innerText = num;
+						game.saveConfig("change_card_num", num, "guozhan");
 					},
 				},
 				continue_game: {
@@ -7069,6 +7179,13 @@ export class Library {
 						map.connect_olfeiyang_four.hide();
 					}
 					map.connect_change_card.show();
+					if (map.connect_change_card_num) {
+						if (config.connect_change_card === "custom") {
+							map.connect_change_card_num.show();
+						} else {
+							map.connect_change_card_num.hide();
+						}
+					}
 					if (map.connect_free_choose) {
 						map.connect_free_choose.show();
 					}
@@ -7130,9 +7247,31 @@ export class Library {
 						once: "一次",
 						twice: "两次",
 						unlimited: "无限",
+						custom: "自定义",
 					},
 					frequent: true,
 					restart: true,
+				},
+				connect_change_card_num: {
+					name: "手气卡次数",
+					init: 3,
+					input: true,
+					restart: true,
+					frequent: true,
+					onblur(e) {
+						let text = e.target,
+							num = Number(text.innerText);
+						if (isNaN(num) || num < 1) {
+							num = 1;
+						} else if (!Number.isInteger(num)) {
+							num = Math.round(num);
+						}
+						text.innerText = num;
+						game.saveConfig("connect_change_card_num", num, "versus");
+						if (_status.connectMode && lib.configOL) {
+							lib.configOL.change_card_num = num;
+						}
+					},
 				},
 				connect_free_choose: {
 					name: "自由选将",
@@ -7182,6 +7321,13 @@ export class Library {
 						map.reset_character_four.hide();
 					}
 					map.change_card.show();
+					if (map.change_card_num) {
+						if (config.change_card === "custom") {
+							map.change_card_num.show();
+						} else {
+							map.change_card_num.hide();
+						}
+					}
 					if (config.versus_mode == "three") {
 						map.edit_character_three.show();
 						map.reset_character_three.show();
@@ -7290,6 +7436,24 @@ export class Library {
 						once: "一次",
 						twice: "两次",
 						unlimited: "无限",
+						custom: "自定义",
+					},
+				},
+				change_card_num: {
+					name: "手气卡次数",
+					init: 3,
+					input: true,
+					restart: true,
+					onblur(e) {
+						let text = e.target,
+							num = Number(text.innerText);
+						if (isNaN(num) || num < 1) {
+							num = 1;
+						} else if (!Number.isInteger(num)) {
+							num = Math.round(num);
+						}
+						text.innerText = num;
+						game.saveConfig("change_card_num", num, "versus");
 					},
 				},
 				enable_all_three: {
@@ -7694,6 +7858,15 @@ export class Library {
 		boss: {
 			name: "挑战",
 			config: {
+				update: function (config, map) {
+					if (map.change_card_num) {
+						if (config.change_card === "custom") {
+							map.change_card_num.show();
+						} else {
+							map.change_card_num.hide();
+						}
+					}
+				},
 				free_choose: {
 					name: "自由选将",
 					init: true,
@@ -7753,6 +7926,24 @@ export class Library {
 					once: "一次",
 					twice: "两次",
 					unlimited: "无限",
+					custom: "自定义",
+				},
+			},
+			change_card_num: {
+				name: "手气卡次数",
+				init: 3,
+				input: true,
+				restart: true,
+				onblur(e) {
+					let text = e.target,
+						num = Number(text.innerText);
+					if (isNaN(num) || num < 1) {
+						num = 1;
+					} else if (!Number.isInteger(num)) {
+						num = Math.round(num);
+					}
+					text.innerText = num;
+					game.saveConfig("change_card_num", num, "boss");
 				},
 			},
 		},
@@ -7762,8 +7953,16 @@ export class Library {
 				update: function (config, map) {
 					if (config.connect_doudizhu_mode == "online") {
 						map.connect_change_card.hide();
+						map.connect_change_card_num?.hide();
 					} else {
 						map.connect_change_card.show();
+						if (map.connect_change_card_num) {
+							if (config.connect_change_card === "custom") {
+								map.connect_change_card_num.show();
+							} else {
+								map.connect_change_card_num.hide();
+							}
+						}
 					}
 					if (config.connect_doudizhu_mode !== "normal") {
 						map.connect_double_character.hide();
@@ -7850,9 +8049,31 @@ export class Library {
 						once: "一次",
 						twice: "两次",
 						unlimited: "无限",
+						custom: "自定义",
 					},
 					frequent: true,
 					restart: true,
+				},
+				connect_change_card_num: {
+					name: "手气卡次数",
+					init: 3,
+					input: true,
+					restart: true,
+					frequent: true,
+					onblur(e) {
+						let text = e.target,
+							num = Number(text.innerText);
+						if (isNaN(num) || num < 1) {
+							num = 1;
+						} else if (!Number.isInteger(num)) {
+							num = Math.round(num);
+						}
+						text.innerText = num;
+						game.saveConfig("connect_change_card_num", num, "doudizhu");
+						if (_status.connectMode && lib.configOL) {
+							lib.configOL.change_card_num = num;
+						}
+					},
 				},
 				connect_enhance_dizhu: {
 					name: "加强地主",
@@ -7904,10 +8125,18 @@ export class Library {
 				update: function (config, map) {
 					if (config.doudizhu_mode == "online") {
 						map.change_card.hide();
+						map.change_card_num?.hide();
 						map.edit_character.show();
 						map.reset_character.show();
 					} else {
 						map.change_card.show();
+						if (map.change_card_num) {
+							if (config.change_card === "custom") {
+								map.change_card_num.show();
+							} else {
+								map.change_card_num.hide();
+							}
+						}
 						map.edit_character.hide();
 						map.reset_character.hide();
 					}
@@ -8078,6 +8307,24 @@ export class Library {
 						once: "一次",
 						twice: "两次",
 						unlimited: "无限",
+						custom: "自定义",
+					},
+				},
+				change_card_num: {
+					name: "手气卡次数",
+					init: 3,
+					input: true,
+					restart: true,
+					onblur(e) {
+						let text = e.target,
+							num = Number(text.innerText);
+						if (isNaN(num) || num < 1) {
+							num = 1;
+						} else if (!Number.isInteger(num)) {
+							num = Math.round(num);
+						}
+						text.innerText = num;
+						game.saveConfig("change_card_num", num, "doudizhu");
 					},
 				},
 				continue_game: {
@@ -8237,8 +8484,30 @@ export class Library {
 						once: "一次",
 						twice: "两次",
 						unlimited: "无限",
+						custom: "自定义",
 					},
 					frequent: true,
+				},
+				connect_change_card_num: {
+					name: "手气卡次数",
+					init: 3,
+					input: true,
+					restart: true,
+					frequent: true,
+					onblur(e) {
+						let text = e.target,
+							num = Number(text.innerText);
+						if (isNaN(num) || num < 1) {
+							num = 1;
+						} else if (!Number.isInteger(num)) {
+							num = Math.round(num);
+						}
+						text.innerText = num;
+						game.saveConfig("connect_change_card_num", num, "single");
+						if (_status.connectMode && lib.configOL) {
+							lib.configOL.change_card_num = num;
+						}
+					},
 				},
 				connect_double_character: {
 					name: "启用双将",
@@ -8270,8 +8539,16 @@ export class Library {
 					}
 					if (config.connect_single_mode != "wuxianhuoli") {
 						map.connect_change_card.hide();
+						map.connect_change_card_num?.hide();
 					} else {
 						map.connect_change_card.show();
+						if (map.connect_change_card_num) {
+							if (config.connect_change_card === "custom") {
+								map.connect_change_card_num.show();
+							} else {
+								map.connect_change_card_num.hide();
+							}
+						}
 					}
 					if (config.connect_single_mode != "dianjiang") {
 						map.connect_double_character.hide();
@@ -8333,6 +8610,24 @@ export class Library {
 						once: "一次",
 						twice: "两次",
 						unlimited: "无限",
+						custom: "自定义",
+					},
+				},
+				change_card_num: {
+					name: "手气卡次数",
+					init: 3,
+					input: true,
+					restart: true,
+					onblur(e) {
+						let text = e.target,
+							num = Number(text.innerText);
+						if (isNaN(num) || num < 1) {
+							num = 1;
+						} else if (!Number.isInteger(num)) {
+							num = Math.round(num);
+						}
+						text.innerText = num;
+						game.saveConfig("change_card_num", num, "single");
 					},
 				},
 				double_character: {
@@ -8387,8 +8682,16 @@ export class Library {
 					}
 					if (config.single_mode != "wuxianhuoli") {
 						map.change_card.hide();
+						map.change_card_num?.hide();
 					} else {
 						map.change_card.show();
+						if (map.change_card_num) {
+							if (config.change_card === "custom") {
+								map.change_card_num.show();
+							} else {
+								map.change_card_num.hide();
+							}
+						}
 					}
 					if (config.single_mode != "dianjiang") {
 						map.double_character.hide();
@@ -8449,6 +8752,13 @@ export class Library {
 						map.change_choice.hide();
 					}
 					map.change_card.show();
+					if (map.change_card_num) {
+						if (config.change_card === "custom") {
+							map.change_card_num.show();
+						} else {
+							map.change_card_num.hide();
+						}
+					}
 				},
 				chess_leader_save: {
 					name: "选择历程",
@@ -8600,6 +8910,24 @@ export class Library {
 						once: "一次",
 						twice: "两次",
 						unlimited: "无限",
+						custom: "自定义",
+					},
+				},
+				change_card_num: {
+					name: "手气卡次数",
+					init: 3,
+					input: true,
+					restart: true,
+					onblur(e) {
+						let text = e.target,
+							num = Number(text.innerText);
+						if (isNaN(num) || num < 1) {
+							num = 1;
+						} else if (!Number.isInteger(num)) {
+							num = Math.round(num);
+						}
+						text.innerText = num;
+						game.saveConfig("change_card_num", num, "chess");
 					},
 				},
 			},
@@ -8607,6 +8935,15 @@ export class Library {
 		tafang: {
 			name: "塔防",
 			config: {
+				update: function (config, map) {
+					if (map.change_card_num) {
+						if (config.change_card === "custom") {
+							map.change_card_num.show();
+						} else {
+							map.change_card_num.hide();
+						}
+					}
+				},
 				tafang_turn: {
 					name: "游戏胜利",
 					init: "10",
@@ -8666,12 +9003,39 @@ export class Library {
 					once: "一次",
 					twice: "两次",
 					unlimited: "无限",
+					custom: "自定义",
+				},
+			},
+			change_card_num: {
+				name: "手气卡次数",
+				init: 3,
+				input: true,
+				restart: true,
+				onblur(e) {
+					let text = e.target,
+						num = Number(text.innerText);
+					if (isNaN(num) || num < 1) {
+						num = 1;
+					} else if (!Number.isInteger(num)) {
+						num = Math.round(num);
+					}
+					text.innerText = num;
+					game.saveConfig("change_card_num", num, "tafang");
 				},
 			},
 		},
 		brawl: {
 			name: "乱斗",
 			config: {
+				update: function (config, map) {
+					if (map.change_card_num) {
+						if (config.change_card === "custom") {
+							map.change_card_num.show();
+						} else {
+							map.change_card_num.hide();
+						}
+					}
+				},
 				huanhuazhizhan: {
 					name: "幻化之战",
 					init: true,
@@ -8745,6 +9109,24 @@ export class Library {
 						once: "一次",
 						twice: "两次",
 						unlimited: "无限",
+						custom: "自定义",
+					},
+				},
+				change_card_num: {
+					name: "手气卡次数",
+					init: 3,
+					input: true,
+					restart: true,
+					onblur(e) {
+						let text = e.target,
+							num = Number(text.innerText);
+						if (isNaN(num) || num < 1) {
+							num = 1;
+						} else if (!Number.isInteger(num)) {
+							num = Math.round(num);
+						}
+						text.innerText = num;
+						game.saveConfig("change_card_num", num, "brawl");
 					},
 				},
 			},
@@ -8752,6 +9134,15 @@ export class Library {
 		stone: {
 			name: "炉石",
 			config: {
+				update: function (config, map) {
+					if (map.change_card_num) {
+						if (config.change_card === "custom") {
+							map.change_card_num.show();
+						} else {
+							map.change_card_num.hide();
+						}
+					}
+				},
 				// update:function(config,map){
 				// 	if(config.stone_mode=='deck'){
 				// 		// map.deck_length.show();
@@ -8905,6 +9296,24 @@ export class Library {
 					once: "一次",
 					twice: "两次",
 					unlimited: "无限",
+					custom: "自定义",
+				},
+			},
+			change_card_num: {
+				name: "手气卡次数",
+				init: 3,
+				input: true,
+				restart: true,
+				onblur(e) {
+					let text = e.target,
+						num = Number(text.innerText);
+					if (isNaN(num) || num < 1) {
+						num = 1;
+					} else if (!Number.isInteger(num)) {
+						num = Math.round(num);
+					}
+					text.innerText = num;
+					game.saveConfig("change_card_num", num, "stone");
 				},
 			},
 		},
