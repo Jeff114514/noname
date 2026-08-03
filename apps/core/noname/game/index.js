@@ -37,6 +37,7 @@ import {
 	closeOLCharacterChooseDialogs,
 	initPlayerFromOLResult,
 } from "./connectFreeChoose.js";
+import { normalizeChangeCardRemaining } from "./changeCardConfig.js";
 
 import { security } from "@/util/sandbox.js";
 import { save } from "@/util/config.js";
@@ -1787,15 +1788,22 @@ export class Game {
 	 * @overload
 	 * @param {Player[]} args
 	 */
+	getChangeCardRemaining() {
+		if (_status.connectMode && lib.configOL) {
+			const changeCard = lib.configOL.change_card || lib.configOL.connect_change_card;
+			const customNum = lib.configOL.change_card_num ?? lib.configOL.connect_change_card_num;
+			return normalizeChangeCardRemaining(changeCard, customNum);
+		}
+		return normalizeChangeCardRemaining(get.config("change_card"), get.config("change_card_num"));
+	}
 	getOLChangeCard() {
 		if (!_status.connectMode || !lib.configOL) {
 			return null;
 		}
-		const changeCard = lib.configOL.change_card || lib.configOL.connect_change_card;
-		if (!changeCard || changeCard === "disabled" || changeCard === false) {
+		if (game.getChangeCardRemaining() === 0) {
 			return null;
 		}
-		return changeCard;
+		return lib.configOL.change_card || lib.configOL.connect_change_card || null;
 	}
 	replaceHandcards(...args) {
 		var next = game.createEvent("replaceHandcards");
@@ -1810,6 +1818,7 @@ export class Game {
 				}
 			}
 		}
+		next.changeCardRemaining = game.getChangeCardRemaining();
 		if (_status.connectMode) {
 			next.changeCard = game.getOLChangeCard();
 			next.setContent("replaceHandcardsOL");
@@ -1821,14 +1830,10 @@ export class Game {
 	 * @param {Player[]} players
 	 */
 	replaceHandcardsAuto(players) {
-		if (_status.connectMode) {
-			if (!game.getOLChangeCard()) {
-				return;
-			}
-			game.replaceHandcards(players);
-		} else if (get.config("change_card") != "disabled") {
-			game.replaceHandcards(players);
+		if (game.getChangeCardRemaining() === 0) {
+			return;
 		}
+		game.replaceHandcards(players);
 	}
 	/**
 	 * @param { string } name
