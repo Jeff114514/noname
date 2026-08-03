@@ -447,9 +447,7 @@ export default () => {
 		} else {
 			if (_status.mode == "guandu") {
 				game.gameDraw(_status.firstAct, 4);
-				if (get.config("change_card") != "disabled") {
-					game.replaceHandcards(game.players.slice(0));
-				}
+				game.replaceHandcardsAuto(game.players.slice(0));
 				game.phaseLoop(_status.firstAct);
 			} else if (_status.mode == "two") {
 				_status.first_less = true;
@@ -461,18 +459,14 @@ export default () => {
 					}
 					return 4;
 				});
-				if (get.config("change_card") != "disabled") {
-					game.replaceHandcards(game.players.slice(0));
-				}
+				game.replaceHandcardsAuto(game.players.slice(0));
 				game.phaseLoop(firstChoose);
 			} else if (_status.mode == "endless") {
 				_status.first_less = true;
 				_status.first_less_forced = true;
 				var firstChoose = _status.firstAct;
 				game.gameDraw(firstChoose);
-				if (get.config("change_card") != "disabled") {
-					game.replaceHandcards(game.players.slice(0));
-				}
+				game.replaceHandcardsAuto(game.players.slice(0));
 				game.phaseLoop(firstChoose);
 			} else if (_status.mode == "four") {
 				game.gameDraw(_status.firstAct, function (player) {
@@ -481,9 +475,7 @@ export default () => {
 					}
 					return 4;
 				});
-				if (get.config("change_card") != "disabled") {
-					game.replaceHandcards(game.players.slice(0));
-				}
+				game.replaceHandcardsAuto(game.players.slice(0));
 				if (game.me == _status.firstAct.previous || game.me == _status.firstAct.previous.previous) {
 					game.me.chooseBool("是否置换手牌？");
 					event.replaceCard = true;
@@ -499,9 +491,7 @@ export default () => {
 				].randomGet();
 				var firstChoose = _status.firstAct;
 				game.gameDraw(firstChoose);
-				if (get.config("change_card") != "disabled") {
-					game.replaceHandcards(game.players.slice(0));
-				}
+				game.replaceHandcardsAuto(game.players.slice(0));
 				game.phaseLoop(firstChoose);
 			} else if (_status.mode == "jiange") {
 				var firstAct;
@@ -513,9 +503,7 @@ export default () => {
 				}
 				_status.actlist = [firstAct, firstAct.next, firstAct.previous, firstAct.next.next, firstAct.previous.previous, firstAct.next.next.next, firstAct.previous.previous.previous, firstAct.next.next.next.next];
 				game.gameDraw(firstAct);
-				if (get.config("change_card") != "disabled") {
-					game.replaceHandcards(game.players.slice(0));
-				}
+				game.replaceHandcardsAuto(game.players.slice(0));
 				game.phaseLoopJiange();
 			} else if (_status.mode == "three") {
 				var firstAct;
@@ -525,9 +513,7 @@ export default () => {
 					firstAct = game.friendZhu;
 				}
 				game.gameDraw(firstAct, 4);
-				if (get.config("change_card") != "disabled") {
-					game.replaceHandcards(game.players.slice(0));
-				}
+				game.replaceHandcardsAuto(game.players.slice(0));
 				game.addGlobalSkill("autoswap");
 				if (lib.config.show_handcardbutton) {
 					ui.versushs = ui.create.system("手牌", null, true);
@@ -567,9 +553,7 @@ export default () => {
 						}
 					}
 					game.gameDraw(firstAct, 4);
-					if (get.config("change_card") != "disabled") {
-						game.replaceHandcards(game.players.slice(0));
-					}
+					game.replaceHandcardsAuto(game.players.slice(0));
 					_status.first_less = true;
 					_status.round = 0;
 					if (lib.storage.single_control) {
