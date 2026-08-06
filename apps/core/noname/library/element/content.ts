@@ -9203,7 +9203,7 @@ export const Content: Record<string, ContentFuncByAll | ContentFuncsByAll> = {
 			}
 			event.dialog = get.idDialog(event.videoId);
 
-			const createDialog = (cards2, id, customButton, pileTop) => {
+			const createDialog = (cards2, id, customButton, event) => {
 				const dialog = get.idDialog(id);
 				dialog.forcebutton = true;
 				//dialog.style.display = "none";
@@ -9217,32 +9217,32 @@ export const Content: Record<string, ContentFuncByAll | ContentFuncsByAll> = {
 					}
 				}
 				// event.top：牌堆顶牌列表（须经 broadcast 传参，勿在 customButton 闭包中用 top，沙盒会解析为 window.top）
-				if (Array.isArray(pileTop)) {
+				// 仅在未自定义 customButton 时由 showCards 自动标记「牌堆顶」，否则交由 customButton 处理
+				if (!event.customButton && Array.isArray(event?.top)) {
 					for (const button of dialog.buttons) {
-						if (pileTop.includes(button.link)) {
+						if (event.top.includes(button.link)) {
 							button.node.gaintag.innerHTML = "牌堆顶";
 						}
 					}
 				}
 				//允许自定义展示牌时对话框里的按钮
 				if (typeof customButton == "function") {
-					dialog.buttons.forEach(button => customButton(button));
+					dialog.buttons.forEach(button => customButton(button, event));
 				}
 				//dialog.style.display = "";
 			};
 			const customButton = event.customButton || (() => {});
-			const pileTop = event.top;
 			//创建对话框
-			createDialog(event.hiddencards, event.videoId, customButton, pileTop);
+			createDialog(event.hiddencards, event.videoId, customButton, event);
 			game.broadcast(
-				(func, cards2, id, customButton, pileTop) => {
-					func(cards2, id, customButton, pileTop);
+				(func, cards2, id, customButton, event) => {
+					func(cards2, id, customButton, event);
 				},
 				createDialog,
 				event.hiddencards,
 				event.videoId,
 				customButton,
-				pileTop
+				event
 			);
 			//处理历史记录的log
 			game.addVideo("showCards", player, [event.str, get.cardsInfo(cards)]);
