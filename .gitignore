@@ -24,3 +24,6 @@ Thumbs.db
 noname.nginx.conf
 nginx-jump-server.example.conf
 nginx-jump-server-baota.conf
+
+# Skill for private use
+.agents/skills/*-selfuse

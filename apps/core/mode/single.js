@@ -2184,7 +2184,7 @@ export default () => {
 				async content(event, trigger, player) {},
 			},
 			puji: {
-				// audio: "chulao",
+				audio: 2,
 				enable: "phaseUse",
 				filter(event, player) {
 					return player.countCards("he") > 0 && player.enemy && player.enemy.countCards("he") > 0;

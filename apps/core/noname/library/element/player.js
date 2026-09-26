@@ -699,41 +699,35 @@ export class Player extends HTMLDivElement {
 	 * @param {string} message 设置提示标记的内容,标记中的\n代表换行符
 	 * @param { SkillTrigger | SAAType<Signal> | boolean } isTemp 是否是临时的tip。默认为false,表示一直存在；若为true,则回合结束自动失去。也可以填一个具体的自定义时机。
 	 * @param { object } [css] 自定义的样式
+	 * @param { boolean } [nobroadcast] 是否不全局展示
 	 * @returns { void }
 	 * @author Curpond
 	 */
-	addTip(index, message, isTemp = false, css = {}) {
+	addTip(index, message, isTemp = false, css = {}, nobroadcast) {
 		const player = this;
 		if (player.getHiddenSkills(true, true).includes(index)) {
 			return;
 		}
-		game.broadcastAll(
-			(player, index, message, css) => {
-				player.node.tipContainer ??= ui.create.div(".tipContainer", player);
-				player.tips ??= new Map();
-				if (!player.tips.has(index)) {
-					player.tips.set(index, ui.create.div(".tip", player.node.tipContainer));
-				}
-				player.tips.get(index).innerHTML = message
-					.replace(/ /g, "&nbsp;")
-					.replace(/(?:♥︎|♦︎)/g, '<span style="color: red; ">$&</span>')
-					.replace(/\n/g, "<br>");
-				player.tips.get(index).css(css);
-
-				let double = player.classList.contains("fullskin2") && lib.config.layout !== "long2";
-
-				const width = player.node.avatar.clientWidth;
-				let w = width * (double ? 2 : 1);
-				player.style.setProperty("--w", `${w}px`);
-
-				//检查tip的高度，使其不覆盖装备
-				game.callHook("checkTipBottom", [player]);
-			},
-			player,
-			index,
-			message,
-			css
-		);
+		const func = (player, index, message, css) => {
+			player.node.tipContainer ??= ui.create.div(".tipContainer", player);
+			player.tips ??= new Map();
+			if (!player.tips.has(index)) {
+				player.tips.set(index, ui.create.div(".tip", player.node.tipContainer));
+			}
+			player.tips.get(index).innerHTML = message
+				.replace(/ /g, "&nbsp;")
+				.replace(/(?:♥︎|♦︎)/g, '<span style="color: red; ">$&</span>')
+				.replace(/\n/g, "<br>");
+			player.tips.get(index).css(css);
+			let double = player.classList.contains("fullskin2") && lib.config.layout !== "long2";
+			const width = player.node.avatar.clientWidth;
+			let w = width * (double ? 2 : 1);
+			player.style.setProperty("--w", `${w}px`);
+			//检查tip的高度，使其不覆盖装备
+			game.callHook("checkTipBottom", [player]);
+		};
+		func(player, index, message, css);
+		if (!nobroadcast) game.broadcast(func, player, index, message, css);
 		if (isTemp && !player.storage[`temp_tip_${index}`]) {
 			player.storage[`temp_tip_${index}`] = true;
 			let expire;
@@ -1902,7 +1896,9 @@ export class Player extends HTMLDivElement {
 	/**
 	 * 新的废除装备区
 	 *
-	 * 参数：废除来源角色（不写默认当前事件角色），废除区域（数字/区域字符串/数组，可以写多个，重复废除）
+	 * 参数支持两种形式：
+	 * - 选项对象：`{ slots, all, source }`，`all: true` 表示废除指定装备栏类型当前*所有*仍启用的槽位；
+	 * - 位置参数：废除来源角色（player，不写默认当前事件角色）与废除区域（数字/区域字符串/数组，可写多个）。
 	 *
 	 * @param {import("./Player/type.d").EventDisableEquipParams} [params]
 	 */
@@ -1918,6 +1914,8 @@ export class Player extends HTMLDivElement {
 			for (const arg of args) {
 				if (get.itemtype(arg) == "player") {
 					next.source = arg;
+				} else if (typeof arg == "object" && !Array.isArray(arg) && arg !== null && get.itemtype(arg) == null) {
+					Object.assign(next, arg);
 				} else if (Array.isArray(arg)) {
 					for (const slot of arg) {
 						if (typeof slot == "string") {
@@ -1940,7 +1938,7 @@ export class Player extends HTMLDivElement {
 		if (!next.source) {
 			next.source = _status.event.player;
 		}
-		if (!next.slots.length) {
+		if (!next.all && !next.slots.length) {
 			_status.event.next.remove(next);
 			next.resolve();
 		}
@@ -1951,7 +1949,9 @@ export class Player extends HTMLDivElement {
 	/**
 	 * 新的恢复装备区
 	 *
-	 * 参数：恢复来源角色（不写默认当前事件角色），恢复区域（数字/区域字符串/数组，可以写多个，重复恢复）
+	 * 参数支持两种形式：
+	 * - 选项对象：`{ slots, all, source }`，`all: true` 表示恢复指定装备栏类型当前*所有*被废除的槽位；
+	 * - 位置参数：恢复来源角色（player，不写默认当前事件角色）与恢复区域（数字/区域字符串/数组，可写多个）。
 	 *
 	 * @param {import("./Player/type.d").EventEnableEquipParams} [params]
 	 */
@@ -1989,7 +1989,7 @@ export class Player extends HTMLDivElement {
 		if (!next.source) {
 			next.source = _status.event.player;
 		}
-		if (!next.slots.length) {
+		if (!next.all && !next.slots.length) {
 			_status.event.next.remove(next);
 			next.resolve();
 		}
@@ -5183,7 +5183,7 @@ export class Player extends HTMLDivElement {
 	/**
 	 * @param { string } [arg1='h']
 	 * @param { string | Record<string, any> | ((card: Card) => boolean) } [arg2]
-	 * @returns { Iterable<Card> }
+	 * @returns { Iterable<VCard> }
 	 */
 	*iterableGetVCards(arg1, arg2) {
 		if (typeof arg1 != "string") {
@@ -5244,7 +5244,7 @@ export class Player extends HTMLDivElement {
 	/**
 	 * @param { string } [arg1='h']
 	 * @param { string | Record<string, any> | ((card: Card) => boolean) } [arg2]
-	 * @returns { Card[] }
+	 * @returns { VCard[] }
 	 */
 	getVCards(arg1, arg2) {
 		return Array.from(this.iterableGetVCards(arg1, arg2));
@@ -6514,6 +6514,7 @@ export class Player extends HTMLDivElement {
 	 */
 	chooseCardOL(params) {
 		const next = game.createEvent("chooseCardOL");
+		next.player = this;
 		next._args = [];
 
 		const args = [...arguments];
@@ -9064,6 +9065,7 @@ export class Player extends HTMLDivElement {
 		}
 		next.filterStop = function () {
 			if (this.num <= 0 || this.player.isHealthy()) {
+				this.num = 0;
 				delete this.filterStop;
 				this.finish();
 				this._triggered = null;
@@ -11355,8 +11357,8 @@ export class Player extends HTMLDivElement {
 					player.additionalSkills[skill] = [];
 				}
 				for (var i = 0; i < skillsToAdd.length; i++) {
-					player.addSkill(skillsToAdd[i], null, true, true);
 					player.additionalSkills[skill].push(skillsToAdd[i]);
+					player.addSkill(skillsToAdd[i], null, true, true);
 				}
 				game.broadcast(
 					(player, map) => {
@@ -12697,16 +12699,18 @@ export class Player extends HTMLDivElement {
 	getEquipRange(cards) {
 		const player = this;
 		if (!cards) {
-			cards = player.getVCards("e", function (card) {
+			const filter = function (card) {
 				return !card.cards?.some(card => {
 					return ui.selected.cards?.includes(card);
 				});
-			});
+			};
+			cards = player.getVCards("e", filter);
+			cards.push(...player.getCards("e", card => !card.cardSymbol && filter(card)));
 		}
 		const range = cards.reduce((range, card) => {
 			let newRange = false;
 			const info = get.info(card, false);
-			if (info.distance) {
+			if (info?.distance) {
 				//如果存在attackRange 则通过attackRange动态获取攻击范围
 				if (typeof info.distance.attackRange == "function") {
 					newRange = info.distance.attackRange(card, player);
@@ -14934,7 +14938,7 @@ export class Player extends HTMLDivElement {
 			let node = arguments[0];
 			let eventInfo = arguments[2],
 				player = this;
-			if (eventInfo !== false) {
+			if (eventInfo == null) {
 				eventInfo = get.cardsetion(player);
 			}
 			if (eventInfo?.length) {
