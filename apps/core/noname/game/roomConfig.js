@@ -489,11 +489,50 @@ export const roomConfig = {
 	},
 
 	/**
+	 * 当前打开的共享配置面板（形如 { cleanup }），未打开时为 null
+	 */
+	_dialog: null,
+
+	/**
+	 * 关闭共享配置面板（幂等，可安全地在任意退出路径调用：关闭按钮、房间断开、房间界面被销毁等）
+	 * @returns {boolean} 是否关闭了一个已打开的面板
+	 */
+	closeDialog() {
+		const dialog = roomConfig._dialog;
+		if (dialog) {
+			dialog.cleanup();
+			return true;
+		}
+		roomConfig.removeLeakedDialogNodes();
+		return false;
+	},
+
+	/**
+	 * 清理残留的共享配置覆盖层与 iframe，避免不可见的全屏节点吞掉整页点击
+	 */
+	removeLeakedDialogNodes() {
+		document.querySelectorAll('[id^="room-config-overlay-"]').forEach(node => node.remove());
+		document.querySelectorAll('iframe[data-room-config-panel="1"]').forEach(node => node.remove());
+	},
+
+	/**
 	 * 显示共享配置对话框（使用iframe隔离CSS）
 	 */
 	showDialog() {
 		var self = this;
-		
+
+		// 已打开时先关闭旧面板，避免多个全屏覆盖层叠加
+		if (roomConfig._dialog) {
+			roomConfig._dialog.cleanup();
+		}
+
+		// 退出路径兜底所需的初始状态
+		var opener = ui.roomConfigButton;
+		var wasOnline = !!(game.online || game.onlineroom);
+		var closed = false;
+		var confirmSeq = 0;
+		var confirmWaiters = new Map();
+
 		// 检查是否在线
 		var isOnline = game.online;
 		
@@ -508,8 +547,9 @@ export const roomConfig = {
 		
 		// 创建iframe完全隔离CSS
 		var iframe = document.createElement("iframe");
+		iframe.setAttribute("data-room-config-panel", "1");
 		iframe.style.cssText = "position:absolute;left:0;top:0;width:100%;height:100%;border:none;";
-		iframe.sandbox = "allow-scripts allow-same-origin allow-modals";
+		iframe.sandbox = "allow-scripts allow-same-origin";
 		
 		overlay.appendChild(iframe);
 		document.body.appendChild(overlay);
@@ -595,6 +635,52 @@ body {
 .actions .delete { background: rgba(244,67,54,0.5); }
 .empty { text-align: center; padding: 20px; color: #888; }
 .error { text-align: center; padding: 20px; color: #f66; }
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 32px;
+  transform: translateX(-50%);
+  max-width: 80%;
+  padding: 10px 16px;
+  background: rgba(0,0,0,0.85);
+  color: #fff;
+  font-size: 14px;
+  border-radius: 4px;
+  z-index: 10;
+}
+.modal-mask {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.5);
+  z-index: 20;
+}
+.modal-box {
+  width: 320px;
+  max-width: calc(100vw - 32px);
+  padding: 16px;
+  background: #3d3d3d;
+  color: #fff;
+  border-radius: 6px;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.45);
+}
+.modal-text { font-size: 14px; line-height: 1.5; margin-bottom: 12px; }
+.modal-input {
+  width: 100%;
+  padding: 8px;
+  margin-bottom: 12px;
+  border: 1px solid #555;
+  background: #2d2d2d;
+  color: #fff;
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+.modal-bar { display: flex; gap: 10px; }
 </style>
 </head>
 <body>
@@ -639,7 +725,7 @@ function cancelSave() {
 function confirmSave() {
   var name = document.getElementById('configNameInput').value.trim();
   if(!name) {
-    alert('请输入配置名称');
+    showNotice('请输入配置名称');
     return;
   }
   window.parent.postMessage({type:'saveRoomConfig', name:name}, '*');
@@ -648,11 +734,14 @@ function confirmSave() {
 function refreshList() { window.parent.postMessage({type:'refreshRoomConfigs'}, '*'); }
 function applyConfig(id) { window.parent.postMessage({type:'applyRoomConfig', id:id}, '*'); }
 function saveAsConfig(id) { 
-  var name = prompt('请输入新配置名称'); 
-  if(name) window.parent.postMessage({type:'saveAsRoomConfig', id:id, name:name.trim()}, '*'); 
+  showPrompt('请输入新配置名称').then(function(name) {
+    if(name) window.parent.postMessage({type:'saveAsRoomConfig', id:id, name:name.trim()}, '*');
+  });
 }
 function deleteConfig(id) { 
-  if(confirm('确定要删除此配置吗？')) window.parent.postMessage({type:'deleteRoomConfig', id:id}, '*'); 
+  showConfirm('确定要删除此配置吗？').then(function(ok) {
+    if(ok) window.parent.postMessage({type:'deleteRoomConfig', id:id}, '*');
+  });
 }
 function renderConfigs(configs) {
   var list = document.getElementById('configList');
@@ -677,10 +766,91 @@ function escapeHtml(text) {
   div.textContent = text;
   return div.innerHTML;
 }
+var activeModal = null;
+function showNotice(message, onDismiss) {
+  var toast = document.createElement('div');
+  toast.className = 'toast';
+  toast.textContent = message;
+  document.body.appendChild(toast);
+  setTimeout(function() {
+    if(toast.parentNode) toast.parentNode.removeChild(toast);
+    if(onDismiss) onDismiss();
+  }, onDismiss ? 1500 : 3000);
+}
+function openModal(options, callback) {
+  if(activeModal) activeModal.cancel();
+  var cancelValue = options.input ? null : false;
+  var mask = document.createElement('div');
+  mask.className = 'modal-mask';
+  var box = document.createElement('div');
+  box.className = 'modal-box';
+  var text = document.createElement('div');
+  text.className = 'modal-text';
+  text.textContent = options.message;
+  box.appendChild(text);
+  var input = null;
+  if(options.input) {
+    input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'modal-input';
+    input.value = options.value || '';
+    input.placeholder = options.placeholder || '';
+    box.appendChild(input);
+  }
+  var bar = document.createElement('div');
+  bar.className = 'modal-bar';
+  var cancelBtn = document.createElement('button');
+  cancelBtn.className = 'btn';
+  cancelBtn.textContent = '取消';
+  var okBtn = document.createElement('button');
+  okBtn.className = 'btn';
+  okBtn.textContent = '确定';
+  bar.appendChild(cancelBtn);
+  bar.appendChild(okBtn);
+  box.appendChild(bar);
+  mask.appendChild(box);
+  document.body.appendChild(mask);
+  var modal = { cancel: null };
+  function finish(result) {
+    if(activeModal !== modal) return;
+    activeModal = null;
+    document.removeEventListener('keydown', onKeyDown);
+    if(mask.parentNode) mask.parentNode.removeChild(mask);
+    callback(result);
+  }
+  function onKeyDown(e) {
+    if(e.key === 'Escape') finish(cancelValue);
+    else if(e.key === 'Enter') finish(options.input ? input.value : true);
+  }
+  modal.cancel = function() { finish(cancelValue); };
+  activeModal = modal;
+  okBtn.addEventListener('click', function() { finish(options.input ? input.value : true); });
+  cancelBtn.addEventListener('click', function() { finish(cancelValue); });
+  mask.addEventListener('click', function(e) { if(e.target === mask) finish(cancelValue); });
+  document.addEventListener('keydown', onKeyDown);
+  if(input) { input.focus(); input.select(); } else { okBtn.focus(); }
+}
+function showConfirm(message) {
+  return new Promise(function(resolve) { openModal({ message: message, input: false }, resolve); });
+}
+function showPrompt(message) {
+  return new Promise(function(resolve) {
+    openModal({ message: message, input: true, value: '', placeholder: '' }, function(result) {
+      resolve(result === null || result === false ? null : String(result));
+    });
+  });
+}
 window.addEventListener('message', function(e) {
   if(e.data.type === 'renderConfigs') renderConfigs(e.data.configs);
   if(e.data.type === 'showError') document.getElementById('configList').innerHTML = '<div class="error">' + escapeHtml(e.data.message) + '</div>';
   if(e.data.type === 'setMode') currentMode = e.data.mode;
+  if(e.data.type === 'showNotice') showNotice(e.data.message, e.data.thenClose ? function() { window.parent.postMessage({type:'closeConfigDialog'}, '*'); } : null);
+  if(e.data.type === 'askConfirm') {
+    var requestId = e.data.requestId;
+    showConfirm(e.data.message).then(function(ok) {
+      window.parent.postMessage({type:'confirmResult', requestId:requestId, ok:ok}, '*');
+    });
+  }
 });
 window.parent.postMessage({type:'loadRoomConfigs'}, '*');
 </script>
@@ -698,6 +868,33 @@ window.parent.postMessage({type:'loadRoomConfigs'}, '*');
 			}
 		};
 		
+		// 在iframe内显示提示（非阻塞，自动消失）
+		function notify(message, thenClose) {
+			if (!iframe.contentWindow) return;
+			iframe.contentWindow.postMessage({type:'showNotice', message:message, thenClose:!!thenClose}, '*');
+		}
+
+		// 在iframe内弹出确认框，返回用户的异步选择（面板已关闭时直接返回false）
+		function askConfirm(message) {
+			return new Promise(resolve => {
+				if (closed || !iframe.contentWindow) {
+					resolve(false);
+					return;
+				}
+				var requestId = ++confirmSeq;
+				confirmWaiters.set(requestId, resolve);
+				iframe.contentWindow.postMessage({type:'askConfirm', requestId:requestId, message:message}, '*');
+			});
+		}
+
+		function resolveConfirm(requestId, ok) {
+			const resolve = confirmWaiters.get(requestId);
+			if (resolve) {
+				confirmWaiters.delete(requestId);
+				resolve(!!ok);
+			}
+		}
+
 		// 监听iframe消息
 		var messageHandler = function(e) {
 			if(!iframe.contentWindow || e.source !== iframe.contentWindow) return;
@@ -724,6 +921,9 @@ window.parent.postMessage({type:'loadRoomConfigs'}, '*');
 				case 'deleteRoomConfig':
 					deleteById(e.data.id);
 					break;
+				case 'confirmResult':
+					resolveConfirm(e.data.requestId, e.data.ok);
+					break;
 			}
 		};
 		window.addEventListener('message', messageHandler);
@@ -743,57 +943,87 @@ window.parent.postMessage({type:'loadRoomConfigs'}, '*');
 			var config = roomConfig.createFromCurrent(name);
 			
 			roomConfig.saveToCloud(config, true).then(() => {
-				alert("配置保存成功");
+				notify("配置保存成功");
 				refreshList();
 			}).catch(err => {
-				alert("保存失败: " + err.message);
+				notify("保存失败: " + err.message);
 			});
 		}
 		
 		function applyById(id) {
 			var config = configCache ? configCache.find(c => c.id == id) : null;
-			if(!config) { alert("配置未找到"); return; }
+			if(!config) { notify("配置未找到"); return; }
 			
-			var coverLocal = confirm("是否同时覆盖单机配置？");
-			try {
-				roomConfig.applyConfig(config, coverLocal);
-				alert("配置已应用");
-				cleanup();
-			} catch (err) {
-				alert("应用配置失败: " + err.message);
-			}
+			askConfirm("是否同时覆盖单机配置？").then(coverLocal => {
+				try {
+					if (coverLocal != null) roomConfig.applyConfig(config, coverLocal);
+					notify("配置已应用", true);
+				} catch (err) {
+					notify("应用配置失败: " + err.message);
+				}
+			});
 		}
 		
 		function saveAs(id, name) {
 			var config = configCache ? configCache.find(c => c.id == id) : null;
-			if(!config) { alert("配置未找到"); return; }
+			if(!config) { notify("配置未找到"); return; }
 			
 			var newConfig = Object.assign({}, config, { id: null, name: name });
 			roomConfig.saveToCloud(newConfig, true).then(() => {
-				alert("配置已另存");
+				notify("配置已另存");
 				refreshList();
 			}).catch(err => {
-				alert("另存失败: " + err.message);
+				notify("另存失败: " + err.message);
 			});
 		}
 		
 		function deleteById(id) {
 			roomConfig.deleteFromCloud(String(id)).then(() => {
-				alert("配置已删除");
+				notify("配置已删除");
 				refreshList();
 			}).catch(err => {
-				alert("删除失败: " + err.message);
+				notify("删除失败: " + err.message);
 			});
 		}
 		
 		function cleanup() {
+			if (closed) return;
+			closed = true;
+			clearInterval(guardTimer);
+			confirmWaiters.forEach(resolve => resolve(null));
+			confirmWaiters.clear();
 			roomConfig.off("roomConfigsUpdated", onConfigsUpdated);
 			window.removeEventListener('message', messageHandler);
+			if (iframe.parentNode) {
+				iframe.parentNode.removeChild(iframe);
+			}
 			if (overlay.parentNode) {
 				overlay.parentNode.removeChild(overlay);
 			}
+			if (roomConfig._dialog && roomConfig._dialog.cleanup === cleanup) {
+				roomConfig._dialog = null;
+				// 兜底：清掉被外部移动/残留的覆盖层与 iframe，避免不可见节点吞掉整页点击
+				roomConfig.removeLeakedDialogNodes();
+			}
 		}
 		
+		roomConfig._dialog = { cleanup };
 		roomConfig.on("roomConfigsUpdated", onConfigsUpdated);
+
+		// 退出路径兜底：覆盖层/iframe被外部移除、承载面板的房间界面被销毁、房间断开时自动关闭面板
+		var guardTimer = setInterval(function () {
+			if (closed) return;
+			if (!overlay.isConnected || !iframe.isConnected) {
+				cleanup();
+				return;
+			}
+			if (opener && !opener.isConnected) {
+				cleanup();
+				return;
+			}
+			if (wasOnline && !game.online && !game.onlineroom) {
+				cleanup();
+			}
+		}, 1000);
 	}
 };

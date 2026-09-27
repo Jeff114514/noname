@@ -18,6 +18,9 @@ interface Client extends WebSocket {
 	beat?: boolean;
 	keyCheck?: NodeJS.Timeout;
 	heartbeat?: NodeJS.Timeout;
+	connectedAt?: number;
+	closeReason?: string;
+	heartbeatMisses?: number;
 }
 
 interface Room {
@@ -423,26 +426,40 @@ export function createServer(options: ServerOptions = {}): ServerInstance {
 
 		client.wsid = util.newId();
 		client.clientIp = ip;
+		client.connectedAt = Date.now();
 		clients.set(client.wsid, client);
+		console.log(`[ol] open wsid=${client.wsid} ip=${ip}`);
 
 		client.keyCheck = setTimeout(() => {
 			util.sendl(client, "denied", "key");
-			setTimeout(() => client.close(), 500);
+			setTimeout(() => {
+				client.closeReason = "key-timeout";
+				client.close(4002, "key timeout");
+			}, 500);
 		}, 2000);
 
 		util.sendl(client, "roomlist", util.buildRoomList(), util.checkEvents(), util.buildClientList(), client.wsid);
 
-		// heartbeat
+		// heartbeat：连续 2 拍无应答才断开，避免主线程瞬时卡顿（录像结构化克隆等）被判死
 		client.heartbeat = setInterval(() => {
 			if (client.beat) {
-				client.close();
-				clearInterval(client.heartbeat);
+				client.heartbeatMisses = (client.heartbeatMisses ?? 0) + 1;
+				const uptime = Math.round((Date.now() - (client.connectedAt ?? Date.now())) / 1000);
+				console.log(`[ol] heartbeat miss #${client.heartbeatMisses} wsid=${client.wsid} uptime=${uptime}s`);
+				if (client.heartbeatMisses >= 2) {
+					client.closeReason = "heartbeat-timeout";
+					console.log(`[ol] heartbeat timeout wsid=${client.wsid} -> close(4001)`);
+					client.close(4001, "heartbeat timeout");
+					clearInterval(client.heartbeat);
+				}
 				return;
 			}
 			client.beat = true;
+			client.heartbeatMisses = 0;
 			try {
 				client.send("heartbeat");
 			} catch {
+				client.closeReason = "heartbeat-send-failed";
 				client.close();
 			}
 		}, 60000);
@@ -480,8 +497,12 @@ export function createServer(options: ServerOptions = {}): ServerInstance {
 		});
 
 		// disconnect handler
-		client.on("close", () => {
+		client.on("close", (code: number, reason: Buffer) => {
 			clearClientTimers(client);
+			const ownedRoom = [...rooms.entries()].find(([, room]) => room.owner === client);
+			const role = ownedRoom ? `owner:${ownedRoom[0]}` : client.owner ? `slave:${client.room?.key ?? "-"}` : "lobby";
+			const uptime = Math.round((Date.now() - (client.connectedAt ?? Date.now())) / 1000);
+			console.log(`[ol] close wsid=${client.wsid} code=${code} reason=${reason?.toString() ?? ""} serverInitiated=${client.closeReason ?? "no"} role=${role} uptime=${uptime}s`);
 
 			// remove rooms owned by this client
 			rooms.forEach((room, key) => {

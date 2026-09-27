@@ -12888,6 +12888,23 @@ export class Library {
 		return this.#zhanfa;
 	}
 
+	/**
+	 * ```plain
+	 * 渲染联机界面显示的玩家昵称（含「 - 离线」/「 - 托管」后缀）
+	 * ```
+	 *
+	 * 显示名由 `nickname`、`isOffline()`、`isAuto` 状态派生，而非在原显示名上拼接，因此重复调用不会叠加后缀
+	 *
+	 * @param {Player} player
+	 * @returns {string}
+	 */
+	getOLNickname(player) {
+		if (!player) {
+			return "";
+		}
+		return (player.nickname || "") + (player.isOffline() ? " - 离线" : player.isAuto ? " - 托管" : "");
+	}
+
 	message = {
 		server: {
 			cardPile() {
@@ -13034,6 +13051,27 @@ export class Library {
 			 */
 			reinited() {
 				this.inited = true;
+				// 重连/中途加入的客户端在 reinit 中只会从快照拿到裸昵称，此处补发各座位的当前显示名
+				var players = [];
+				var nicknames = [];
+				for (var playerid in lib.playerOL) {
+					players.push(lib.playerOL[playerid]);
+					nicknames.push(lib.getOLNickname(lib.playerOL[playerid]));
+				}
+				if (!players.length) {
+					return;
+				}
+				game.broadcast(
+					function (players, nicknames) {
+						for (var i = 0; i < players.length; i++) {
+							if (players[i] && typeof players[i].setNickname == "function") {
+								players[i].setNickname(nicknames[i]);
+							}
+						}
+					},
+					players,
+					nicknames
+				);
 			},
 			/**
 			 * @this {import("./element/client.js").Client}
@@ -13238,10 +13276,15 @@ export class Library {
 				var player = lib.playerOL[this.id];
 				if (player) {
 					player.isAuto = true;
-					player.setNickname(player.nickname + " - 托管");
-					game.broadcast(function (player) {
-						player.setNickname(player.nickname + " - 托管");
-					}, player);
+					var nickname = lib.getOLNickname(player);
+					player.setNickname(nickname);
+					game.broadcast(
+						function (player, nickname) {
+							player.setNickname(nickname);
+						},
+						player,
+						nickname
+					);
 				}
 			},
 			/**
@@ -13254,10 +13297,15 @@ export class Library {
 				var player = lib.playerOL[this.id];
 				if (player) {
 					player.isAuto = false;
-					player.setNickname(player.nickname);
-					game.broadcast(function (player) {
-						player.setNickname(player.nickname);
-					}, player);
+					var nickname = lib.getOLNickname(player);
+					player.setNickname(nickname);
+					game.broadcast(
+						function (player, nickname) {
+							player.setNickname(nickname);
+						},
+						player,
+						nickname
+					);
 				}
 			},
 			exec(func) {
@@ -13387,10 +13435,16 @@ export class Library {
 			selfclose: function () {
 				if (game.online || game.onlineroom) {
 					if ((game.servermode || game.onlinehall) && _status.over) {
-						// later
+						// 对局已结束：保留结算界面
 					} else {
 						game.saveConfig("tmp_user_roomId");
 					}
+					// 房主断开后本端不会再收到状态更新：先提示，确认后再关连接
+					// （关连接会触发 onclose → game.reload，立即关会把提示一起冲掉）
+					game.prompt("房主已离开，房间已解散", "alert", function () {
+						game.ws.close();
+					});
+					return;
 				}
 				game.ws.close();
 			},

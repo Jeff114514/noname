@@ -92,11 +92,15 @@ export class Client {
 			game.updateWaiting();
 		} else if (lib.playerOL[this.id]) {
 			var player = lib.playerOL[this.id];
-			player.setNickname(player.nickname + " - 离线");
-			// @ts-expect-error ignore
-			game.broadcast(function (player) {
-				player.setNickname(player.nickname + " - 离线");
-			}, player);
+			var nickname = lib.getOLNickname(player);
+			player.setNickname(nickname);
+			game.broadcast(
+				function (player, nickname) {
+					player.setNickname(nickname);
+				},
+				player,
+				nickname
+			);
 			player.unwait("ai");
 		}
 		return this;

@@ -4462,9 +4462,12 @@ export class Click {
 			if (game.online) {
 				game.send("auto");
 			} else if (_status.connectMode) {
-				game.broadcastAll(function (player) {
-					player.setNickname(player.nickname + " - 托管");
-				}, game.me);
+				if (game.me) {
+					game.me.isAuto = true;
+				}
+				game.broadcastAll(function (player, nickname) {
+					player.setNickname(nickname);
+				}, game.me, lib.getOLNickname(game.me));
 			}
 		} else {
 			if (game.notMe) {
@@ -4478,9 +4481,12 @@ export class Click {
 			if (game.online) {
 				game.send("unauto");
 			} else if (_status.connectMode) {
-				game.broadcastAll(function (player) {
-					player.setNickname(player.nickname);
-				}, game.me);
+				if (game.me) {
+					game.me.isAuto = false;
+				}
+				game.broadcastAll(function (player, nickname) {
+					player.setNickname(nickname);
+				}, game.me, lib.getOLNickname(game.me));
 			}
 		}
 	}

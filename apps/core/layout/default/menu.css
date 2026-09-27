@@ -728,6 +728,18 @@
 	box-shadow: rgba(0, 0, 0, 0.3) 0 0 0 1px, rgba(0, 133, 255, 0.8) 0 0 10px, rgba(0, 133, 255, 0.8) 0 0 15px !important;
 }
 
+/* 挂载圆形「启/设」按钮的启动页（startMenu.js 加 .has-start-button）：
+   按钮锚定在内容区底部，右栏让出 70px（按钮 50px + 下边距 15px + 间隔 5px），
+   配置行被裁到按钮上方，行数与滚动位置都不会让行落在按钮下 */
+.menu.main > .menu-content > div.has-start-button > .menubutton.round {
+	bottom: 15px;
+	top: auto;
+}
+
+.menu.main > .menu-content > div.has-start-button > .right.pane {
+	height: calc(100% - 70px);
+}
+
 .popup-container.hidden {
 	pointer-events: none;
 }

@@ -7305,7 +7305,8 @@ ${e instanceof Error ? e.stack : String(e)}`);
 		if (game.addRecord) {
 			game.addRecord(resultbool);
 		}
-		if (_status.connectMode && !game.online) {
+		// 房主在联机房间内时 game.online 为 false，此处若自动重载会让房主结算界面 15 秒后消失、房间随之解散
+		if (_status.connectMode && !game.online && !game.onlineroom) {
 			setTimeout(game.reload, 15000);
 		}
 	}

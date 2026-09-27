@@ -14,6 +14,9 @@ export const startMenu = function (connectMenu) {
 	var start = cacheMenuxpages.shift();
 	var rightPane = start.lastChild;
 
+	/** 标记该页挂载了圆形快捷按钮，menu.css 依此类名为它预留底部空间 */
+	start.classList.add("has-start-button");
+
 	/** 启动按钮 */
 	let startButton = ui.create.div(".menubutton.round.highlight", "启", start, function () {
 		if (this.animating || this.classList.contains("dim")) {
